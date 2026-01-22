@@ -40,21 +40,21 @@ export function InstanceCard({ instance, onEdit, onDelete }: InstanceCardProps) 
   const StatusIcon = config.icon;
 
   return (
-    <div className="glass-card p-4 animate-fade-in hover:border-primary/30 transition-all duration-300">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg ${config.bg} flex items-center justify-center`}>
-            <StatusIcon className={`w-5 h-5 ${config.color}`} />
+    <div className="glass-card p-3 md:p-4 animate-fade-in hover:border-primary/30 transition-all duration-300">
+      <div className="flex items-center justify-between mb-2 md:mb-3">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${config.bg} flex items-center justify-center shrink-0`}>
+            <StatusIcon className={`w-4 h-4 md:w-5 md:h-5 ${config.color}`} />
           </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{instance.name}</h3>
-            <p className="text-xs text-muted-foreground">{instance.phoneNumber || 'Sem número'}</p>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground text-sm md:text-base truncate">{instance.name}</h3>
+            <p className="text-[10px] md:text-xs text-muted-foreground truncate">{instance.phoneNumber || 'Sem número'}</p>
           </div>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
+            <Button variant="ghost" size="icon" className="text-muted-foreground h-8 w-8">
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -75,14 +75,14 @@ export function InstanceCard({ instance, onEdit, onDelete }: InstanceCardProps) 
       </div>
 
       <div className="flex items-center gap-2">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.color}`}>
-          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+        <span className={`inline-flex items-center gap-1 md:gap-1.5 px-2 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-medium ${config.bg} ${config.color}`}>
+          <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-current animate-pulse" />
           {config.label}
         </span>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-xs text-muted-foreground truncate">
+      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border/50">
+        <p className="text-[10px] md:text-xs text-muted-foreground truncate">
           {instance.apiUrl}
         </p>
       </div>
