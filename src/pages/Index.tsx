@@ -160,9 +160,9 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <StatsCard
             title="Instâncias Ativas"
             value={instances.filter(i => i.status !== 'disconnected').length}
@@ -192,21 +192,21 @@ export default function Index() {
         </div>
 
         {/* Flow Visualization */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <FlowVisualization instances={instances} warmingNumber={warmingNumber} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Left Column - Instances */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Instâncias Evolution</h2>
+              <h2 className="text-base md:text-lg font-semibold text-foreground">Instâncias Evolution</h2>
               <Button 
                 onClick={() => setIsAddInstanceOpen(true)}
                 size="sm"
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 text-xs md:text-sm"
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                 Nova
               </Button>
             </div>
@@ -221,27 +221,27 @@ export default function Index() {
                 />
               ))}
               {instances.length === 0 && (
-                <div className="glass-card p-8 text-center">
-                  <Server className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">Nenhuma instância configurada</p>
+                <div className="glass-card p-6 md:p-8 text-center">
+                  <Server className="w-10 h-10 md:w-12 md:h-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-sm md:text-base text-muted-foreground">Nenhuma instância configurada</p>
                 </div>
               )}
             </div>
 
             {/* Warming Number Setup */}
-            <div className="glass-card p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Phone className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Número para Aquecer</h3>
+            <div className="glass-card p-4 md:p-5">
+              <div className="flex items-center gap-2 mb-3 md:mb-4">
+                <Phone className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                <h3 className="font-semibold text-foreground text-sm md:text-base">Número para Aquecer</h3>
               </div>
               <div className="flex gap-2">
                 <Input
                   value={newWarmingPhone}
                   onChange={(e) => setNewWarmingPhone(e.target.value)}
                   placeholder="5511999999999"
-                  className="bg-secondary border-border/50 focus:border-primary"
+                  className="bg-secondary border-border/50 focus:border-primary text-sm"
                 />
-                <Button onClick={handleSetWarmingNumber} className="bg-primary hover:bg-primary/90 shrink-0">
+                <Button onClick={handleSetWarmingNumber} className="bg-primary hover:bg-primary/90 shrink-0 text-xs md:text-sm">
                   Definir
                 </Button>
               </div>
@@ -249,7 +249,7 @@ export default function Index() {
           </div>
 
           {/* Middle Column - Warming Status & Messages */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {warmingNumber && (
               <WarmingNumberCard
                 number={warmingNumber}
@@ -266,7 +266,7 @@ export default function Index() {
           </div>
 
           {/* Right Column - Config & Clients */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <ConfigPanel config={config} onConfigChange={setConfig} />
             <ClientNumbersList
               numbers={clientNumbers}

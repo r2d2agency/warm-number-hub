@@ -42,63 +42,65 @@ export function ClientNumbersList({ numbers, onAddNumber, onDeleteNumber, onImpo
   };
 
   return (
-    <div className="glass-card p-5 animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold text-foreground">Números dos Clientes ({numbers.length})</h3>
+    <div className="glass-card p-4 md:p-5 animate-fade-in">
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <Users className="w-5 h-5 text-primary shrink-0" />
+          <h3 className="font-semibold text-foreground text-sm md:text-base truncate">Números dos Clientes ({numbers.length})</h3>
         </div>
-        <label className="cursor-pointer">
+        <label className="cursor-pointer shrink-0">
           <input
             type="file"
             accept=".txt,.csv"
             onChange={handleFileUpload}
             className="hidden"
           />
-          <Button variant="outline" size="sm" className="border-border/50" asChild>
+          <Button variant="outline" size="sm" className="border-border/50 text-xs md:text-sm" asChild>
             <span>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
+              <Upload className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Importar</span>
             </span>
           </Button>
         </label>
       </div>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <Input
           value={newNumber}
           onChange={(e) => setNewNumber(e.target.value)}
           placeholder="Número (5511999999999)"
-          className="bg-secondary border-border/50 focus:border-primary flex-1"
+          className="bg-secondary border-border/50 focus:border-primary text-sm"
         />
-        <Input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="Nome (opcional)"
-          className="bg-secondary border-border/50 focus:border-primary w-32"
-        />
-        <Button onClick={handleAdd} size="icon" className="bg-primary hover:bg-primary/90 shrink-0">
-          <Plus className="w-4 h-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nome (opcional)"
+            className="bg-secondary border-border/50 focus:border-primary flex-1 sm:w-28 text-sm"
+          />
+          <Button onClick={handleAdd} size="icon" className="bg-primary hover:bg-primary/90 shrink-0">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
-      <ScrollArea className="h-48">
+      <ScrollArea className="h-40 md:h-48">
         <div className="space-y-2">
           {numbers.map((client) => (
             <div
               key={client.id}
-              className="group flex items-center justify-between bg-secondary/30 rounded-lg px-3 py-2 hover:bg-secondary/50 transition-colors"
+              className="group flex items-center justify-between bg-secondary/30 rounded-lg px-2 md:px-3 py-2 hover:bg-secondary/50 transition-colors"
             >
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-xs text-primary font-medium">
+              <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="text-[10px] md:text-xs text-primary font-medium">
                     {client.name ? client.name.charAt(0).toUpperCase() : '#'}
                   </span>
                 </div>
                 <div className="overflow-hidden">
-                  <p className="text-sm text-foreground truncate">{client.phoneNumber}</p>
+                  <p className="text-xs md:text-sm text-foreground truncate">{client.phoneNumber}</p>
                   {client.name && (
-                    <p className="text-xs text-muted-foreground truncate">{client.name}</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">{client.name}</p>
                   )}
                 </div>
               </div>
@@ -106,17 +108,17 @@ export function ClientNumbersList({ numbers, onAddNumber, onDeleteNumber, onImpo
                 variant="ghost"
                 size="icon"
                 onClick={() => onDeleteNumber(client.id)}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
+                className="opacity-100 md:opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 h-8 w-8"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
               </Button>
             </div>
           ))}
           {numbers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nenhum número cadastrado</p>
-              <p className="text-xs mt-1">Adicione números ou importe de um arquivo</p>
+            <div className="text-center py-6 md:py-8 text-muted-foreground">
+              <Users className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 opacity-50" />
+              <p className="text-xs md:text-sm">Nenhum número cadastrado</p>
+              <p className="text-[10px] md:text-xs mt-1">Adicione números ou importe de um arquivo</p>
             </div>
           )}
         </div>

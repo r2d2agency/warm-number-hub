@@ -13,23 +13,23 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, subtitle, icon: Icon, trend }: StatsCardProps) {
   return (
-    <div className="glass-card p-5 animate-fade-in">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{value}</p>
+    <div className="glass-card p-3 md:p-5 animate-fade-in">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 md:space-y-2 min-w-0 flex-1">
+          <p className="text-xs md:text-sm text-muted-foreground font-medium truncate">{title}</p>
+          <p className="text-xl md:text-3xl font-bold text-foreground">{value}</p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground truncate">{subtitle}</p>
           )}
           {trend && (
-            <div className={`flex items-center gap-1 text-xs ${trend.isPositive ? 'text-success' : 'text-destructive'}`}>
+            <div className={`flex items-center gap-1 text-[10px] md:text-xs ${trend.isPositive ? 'text-success' : 'text-destructive'}`}>
               <span>{trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%</span>
-              <span className="text-muted-foreground">vs ontem</span>
+              <span className="text-muted-foreground hidden sm:inline">vs ontem</span>
             </div>
           )}
         </div>
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Icon className="w-6 h-6 text-primary" />
+        <div className="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 md:w-6 md:h-6 text-primary" />
         </div>
       </div>
     </div>
