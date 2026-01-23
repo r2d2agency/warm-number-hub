@@ -101,10 +101,7 @@ export default function Login() {
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Não tem uma conta?{' '}
-            <Link to="/register" className="text-primary hover:underline">
-              Criar conta
-            </Link>
+            Contate o administrador para obter acesso.
           </p>
         </div>
       </div>
