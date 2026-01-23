@@ -324,7 +324,7 @@ export default function Admin() {
                         )}
                       </div>
                       <div className="flex gap-1">
-                        {u.roles.map((role) => (
+                        {(Array.isArray(u.roles) ? u.roles : [u.roles || 'user']).map((role) => (
                           <Badge key={role} variant={getRoleBadgeVariant(role)}>
                             {role}
                           </Badge>
@@ -336,7 +336,7 @@ export default function Admin() {
                       {/* Role selector */}
                       {u.id !== user?.id && (
                         <Select
-                          value={u.roles[0] || 'user'}
+                          value={(Array.isArray(u.roles) ? u.roles[0] : u.roles) || 'user'}
                           onValueChange={(v) => handleUpdateRole(u.id, v as AppRole)}
                         >
                           <SelectTrigger className="w-32">
