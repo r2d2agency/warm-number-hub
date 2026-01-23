@@ -3,6 +3,17 @@ const db = require('../db');
 
 const router = express.Router();
 
+// Convert snake_case DB row to camelCase for frontend
+function formatConfig(row) {
+  return {
+    minDelaySeconds: row.min_delay_seconds,
+    maxDelaySeconds: row.max_delay_seconds,
+    messagesPerHour: row.messages_per_hour,
+    activeHoursStart: row.active_hours_start,
+    activeHoursEnd: row.active_hours_end,
+  };
+}
+
 // Get config for user
 router.get('/', async (req, res) => {
   try {
@@ -19,10 +30,10 @@ router.get('/', async (req, res) => {
          RETURNING *`,
         [req.user.userId]
       );
-      return res.json(newConfig.rows[0]);
+      return res.json(formatConfig(newConfig.rows[0]));
     }
 
-    res.json(result.rows[0]);
+    res.json(formatConfig(result.rows[0]));
   } catch (error) {
     console.error('Get config error:', error);
     res.status(500).json({ message: 'Erro ao buscar configuração' });
@@ -51,7 +62,7 @@ router.put('/', async (req, res) => {
       return res.status(404).json({ message: 'Configuração não encontrada' });
     }
 
-    res.json(result.rows[0]);
+    res.json(formatConfig(result.rows[0]));
   } catch (error) {
     console.error('Update config error:', error);
     res.status(500).json({ message: 'Erro ao atualizar configuração' });
