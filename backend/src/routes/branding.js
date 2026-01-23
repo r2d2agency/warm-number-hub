@@ -70,13 +70,13 @@ router.put('/', authenticateToken, requireAdmin, async (req, res) => {
         [logoUrl || null, appName || 'WhatsApp Warmer', appSubtitle || 'Sistema de Aquecimento', primaryColor || '#22c55e']
       );
     } else {
-      // Update existing
+      // Update existing - use direct assignment to allow null/empty values
       result = await db.query(
         `UPDATE branding
-         SET logo_url = COALESCE($1, logo_url),
-             app_name = COALESCE($2, app_name),
-             app_subtitle = COALESCE($3, app_subtitle),
-             primary_color = COALESCE($4, primary_color),
+         SET logo_url = $1,
+             app_name = COALESCE(NULLIF($2, ''), app_name),
+             app_subtitle = COALESCE(NULLIF($3, ''), app_subtitle),
+             primary_color = COALESCE(NULLIF($4, ''), primary_color),
              updated_at = NOW()
          WHERE id = $5
          RETURNING *`,

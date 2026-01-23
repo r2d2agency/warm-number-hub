@@ -3,6 +3,24 @@ const db = require('../db');
 
 const router = express.Router();
 
+// Convert snake_case DB row to camelCase for frontend
+function formatInstance(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    apiUrl: row.api_url,
+    apiKey: row.api_key,
+    phoneNumber: row.phone_number,
+    status: row.status,
+    isPrimary: row.is_primary || false,
+    messagesSent: row.messages_sent || 0,
+    messagesReceived: row.messages_received || 0,
+    lastActivity: row.last_activity,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 // Get all instances for user
 router.get('/', async (req, res) => {
   try {
@@ -10,7 +28,7 @@ router.get('/', async (req, res) => {
       'SELECT * FROM instances WHERE user_id = $1 ORDER BY is_primary DESC, created_at DESC',
       [req.user.userId]
     );
-    res.json(result.rows);
+    res.json(result.rows.map(formatInstance));
   } catch (error) {
     console.error('Get instances error:', error);
     res.status(500).json({ message: 'Erro ao buscar instâncias' });
@@ -41,7 +59,7 @@ router.post('/', async (req, res) => {
       [req.user.userId, name, apiUrl, apiKey, phoneNumber, isPrimary || false]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(formatInstance(result.rows[0]));
   } catch (error) {
     console.error('Create instance error:', error);
     res.status(500).json({ message: 'Erro ao criar instância' });
@@ -80,7 +98,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Instância não encontrada' });
     }
 
-    res.json(result.rows[0]);
+    res.json(formatInstance(result.rows[0]));
   } catch (error) {
     console.error('Update instance error:', error);
     res.status(500).json({ message: 'Erro ao atualizar instância' });
