@@ -1,5 +1,5 @@
 import { WarmingConfig } from "@/types/warming";
-import { Settings, Clock, Zap, Play, Pause } from "lucide-react";
+import { Settings, Clock, Zap, Play, Pause, Loader2 } from "lucide-react";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { Button } from "./ui/button";
@@ -10,9 +10,10 @@ interface ConfigPanelProps {
   onConfigChange: (config: WarmingConfig) => void;
   isWarming?: boolean;
   onToggleWarming?: () => void;
+  isTogglingWarming?: boolean;
 }
 
-export function ConfigPanel({ config, onConfigChange, isWarming = false, onToggleWarming }: ConfigPanelProps) {
+export function ConfigPanel({ config, onConfigChange, isWarming = false, onToggleWarming, isTogglingWarming = false }: ConfigPanelProps) {
   const handleHourChange = (field: 'activeHoursStart' | 'activeHoursEnd', value: string) => {
     const numValue = parseInt(value, 10);
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 23) {
@@ -33,8 +34,11 @@ export function ConfigPanel({ config, onConfigChange, isWarming = false, onToggl
             variant={isWarming ? "destructive" : "default"}
             size="sm"
             className="gap-2"
+            disabled={isTogglingWarming}
           >
-            {isWarming ? (
+            {isTogglingWarming ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isWarming ? (
               <>
                 <Pause className="w-4 h-4" />
                 <span className="hidden sm:inline">Parar</span>

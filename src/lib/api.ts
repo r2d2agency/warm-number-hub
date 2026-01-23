@@ -125,6 +125,19 @@ export const api = {
   toggleWarmingStatus: (id: string) =>
     request<WarmingNumber>(`/warming-number/${id}/toggle`, { method: 'POST' }),
 
+  // Warming Control
+  getWarmingStatus: () =>
+    request<WarmingStatus>('/warming-number/status'),
+
+  startWarming: () =>
+    request<{ message: string; isActive: boolean }>('/warming-number/start', { method: 'POST' }),
+
+  stopWarming: () =>
+    request<{ message: string; isActive: boolean }>('/warming-number/stop', { method: 'POST' }),
+
+  getWarmingLogs: (limit = 50) =>
+    request<WarmingLog[]>(`/warming-number/logs?limit=${limit}`),
+
   // Messages
   getMessages: () =>
     request<Message[]>('/messages'),
@@ -266,6 +279,23 @@ interface WarmingConfig {
   messagesPerHour: number;
   activeHoursStart: number;
   activeHoursEnd: number;
+}
+
+interface WarmingStatus {
+  isActive: boolean;
+  startedAt: string | null;
+  nextCycleAt: string | null;
+}
+
+interface WarmingLog {
+  id: string;
+  action: string;
+  details: {
+    from?: string;
+    to?: string;
+    message?: string;
+  };
+  createdAt: string;
 }
 
 export interface Branding {
