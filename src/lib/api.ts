@@ -1,7 +1,5 @@
-// API Client para conectar ao backend no Easypanel
-// Configure a variável de ambiente VITE_API_URL no Easypanel
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// API Client - usa proxy do nginx em produção
+const API_URL = '/api';
 
 interface ApiResponse<T> {
   data?: T;
