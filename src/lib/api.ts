@@ -1,7 +1,16 @@
 // API Client
 // - Em produção (Nginx): use "/api" (mesma origem)
-// - Em preview/dev sem proxy: defina VITE_API_URL (ex: https://seu-dominio.com/api)
-const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+// - Em preview/dev sem proxy: pode usar VITE_API_URL ou um override em localStorage
+//   localStorage.setItem('api_base_url', 'https://seu-dominio.com/api')
+const API_URL = (
+  (typeof window !== 'undefined' && localStorage.getItem('api_base_url')) ||
+  import.meta.env.VITE_API_URL ||
+  '/api'
+).replace(/\/$/, '');
+
+export function getApiBaseUrl() {
+  return API_URL;
+}
 
 interface ApiResponse<T> {
   data?: T;
