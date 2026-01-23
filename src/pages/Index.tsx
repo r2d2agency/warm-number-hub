@@ -8,6 +8,7 @@ import { MessagesList } from "@/components/MessagesList";
 import { ConfigPanel } from "@/components/ConfigPanel";
 import { ClientNumbersList } from "@/components/ClientNumbersList";
 import { FlowVisualization } from "@/components/FlowVisualization";
+import { WarmingLogsPanel } from "@/components/WarmingLogsPanel";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -310,7 +311,7 @@ export default function Index() {
           } : null} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Left Column - Instances */}
           <div className="space-y-4 md:space-y-6">
             <div className="flex items-center justify-between">
@@ -348,7 +349,7 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Middle Column - Messages */}
+          {/* Second Column - Messages */}
           <div className="space-y-4 md:space-y-6">
             <MessagesList
               messages={messages}
@@ -358,7 +359,7 @@ export default function Index() {
             />
           </div>
 
-          {/* Right Column - Config & Clients */}
+          {/* Third Column - Config & Clients */}
           <div className="space-y-4 md:space-y-6">
             <ConfigPanel 
               config={config} 
@@ -373,6 +374,11 @@ export default function Index() {
               onDeleteNumber={handleDeleteClientNumber}
               onImportNumbers={handleImportClientNumbers}
             />
+          </div>
+
+          {/* Fourth Column - Warming Logs */}
+          <div className="space-y-4 md:space-y-6">
+            <WarmingLogsPanel isWarming={isWarming} />
           </div>
         </div>
       </main>
