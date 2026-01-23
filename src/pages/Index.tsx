@@ -90,6 +90,10 @@ export default function Index() {
     setInstances(instances.filter(i => i.id !== id));
   };
 
+  const handleStatusUpdate = (id: string, status: Instance['status']) => {
+    setInstances(instances.map(i => i.id === id ? { ...i, status } : i));
+  };
+
   const handleToggleWarmingStatus = (id: string) => {
     if (warmingNumber && warmingNumber.id === id) {
       setWarmingNumber({
@@ -218,6 +222,7 @@ export default function Index() {
                   instance={instance}
                   onEdit={handleEditInstance}
                   onDelete={handleDeleteInstance}
+                  onStatusUpdate={handleStatusUpdate}
                 />
               ))}
               {instances.length === 0 && (

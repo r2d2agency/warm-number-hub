@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Instance } from "@/types/warming";
-import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit } from "lucide-react";
+import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -7,14 +8,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 interface InstanceCardProps {
   instance: Instance;
   onEdit: (instance: Instance) => void;
   onDelete: (id: string) => void;
+  onStatusUpdate?: (id: string, status: Instance['status']) => void;
 }
 
-export function InstanceCard({ instance, onEdit, onDelete }: InstanceCardProps) {
+export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate }: InstanceCardProps) {
+  const [checking, setChecking] = useState(false);
+
   const statusConfig = {
     connected: {
       icon: Wifi,
@@ -39,6 +45,23 @@ export function InstanceCard({ instance, onEdit, onDelete }: InstanceCardProps) 
   const config = statusConfig[instance.status];
   const StatusIcon = config.icon;
 
+  const handleCheckStatus = async () => {
+    setChecking(true);
+    try {
+      const { data, error } = await api.checkInstanceStatus(instance.id);
+      if (error) {
+        toast.error(error);
+      } else if (data) {
+        toast.success(data.message);
+        onStatusUpdate?.(instance.id, data.status);
+      }
+    } catch {
+      toast.error('Erro ao verificar status');
+    } finally {
+      setChecking(false);
+    }
+  };
+
   return (
     <div className="glass-card p-3 md:p-4 animate-fade-in hover:border-primary/30 transition-all duration-300">
       <div className="flex items-center justify-between mb-2 md:mb-3">
@@ -52,26 +75,39 @@ export function InstanceCard({ instance, onEdit, onDelete }: InstanceCardProps) 
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground h-8 w-8">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="glass-card">
-            <DropdownMenuItem onClick={() => onEdit(instance)} className="cursor-pointer">
-              <Edit className="w-4 h-4 mr-2" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => onDelete(instance.id)} 
-              className="cursor-pointer text-destructive focus:text-destructive"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Remover
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-muted-foreground h-8 w-8"
+            onClick={handleCheckStatus}
+            disabled={checking}
+            title="Verificar status"
+          >
+            <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-muted-foreground h-8 w-8">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="glass-card">
+              <DropdownMenuItem onClick={() => onEdit(instance)} className="cursor-pointer">
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onDelete(instance.id)} 
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remover
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">

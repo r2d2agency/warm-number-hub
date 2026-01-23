@@ -103,6 +103,9 @@ export const api = {
   deleteInstance: (id: string) =>
     request<void>(`/instances/${id}`, { method: 'DELETE' }),
 
+  checkInstanceStatus: (id: string) =>
+    request<{ status: 'connected' | 'disconnected' | 'warming'; message: string }>(`/instances/${id}/check-status`, { method: 'POST' }),
+
   // Warming Numbers
   getWarmingNumber: () =>
     request<WarmingNumber>('/warming-number'),
