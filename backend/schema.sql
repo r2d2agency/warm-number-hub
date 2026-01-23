@@ -1,6 +1,13 @@
 -- Schema SQL para PostgreSQL
 -- Execute este script no seu banco de dados
 
+-- Enum para roles
+DO $$ BEGIN
+    CREATE TYPE app_role AS ENUM ('superadmin', 'admin', 'user');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- Tabela de usuários
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -9,6 +16,18 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Tabela de roles de usuário
+CREATE TABLE IF NOT EXISTS user_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role app_role NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, role)
+);
+
+-- Índice para performance
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
 
 -- Tabela de instâncias Evolution API
 CREATE TABLE IF NOT EXISTS instances (
