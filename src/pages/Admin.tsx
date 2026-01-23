@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { api, AdminUser, AppRole } from '@/lib/api';
+import { api, AdminUser, AppRole, Branding } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +35,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Key, Trash2, Shield, Users, ArrowLeft } from 'lucide-react';
+import { Loader2, Plus, Key, Trash2, Shield, Users, ArrowLeft, Palette, Image, Save } from 'lucide-react';
 
 export default function Admin() {
   const { isAdmin, isSuperAdmin, user } = useAuth();
@@ -57,13 +57,30 @@ export default function Admin() {
   const [resetPassword, setResetPassword] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
+  // Branding
+  const [branding, setBranding] = useState<Branding>({
+    appName: 'WhatsApp Warmer',
+    appSubtitle: 'Sistema de Aquecimento',
+    primaryColor: '#22c55e',
+    logoUrl: null,
+  });
+  const [isSavingBranding, setIsSavingBranding] = useState(false);
+
   useEffect(() => {
     if (!isAdmin) {
       navigate('/');
       return;
     }
     loadUsers();
+    loadBranding();
   }, [isAdmin, navigate]);
+
+  const loadBranding = async () => {
+    const { data } = await api.getBranding();
+    if (data) {
+      setBranding(data);
+    }
+  };
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -199,6 +216,29 @@ export default function Admin() {
     }
   };
 
+  const handleSaveBranding = async () => {
+    setIsSavingBranding(true);
+    const { data, error } = await api.updateBranding(branding);
+    setIsSavingBranding(false);
+
+    if (error) {
+      toast({
+        title: 'Erro ao salvar branding',
+        description: error,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (data) {
+      setBranding(data);
+      toast({
+        title: 'Branding atualizado',
+        description: 'As alterações foram salvas. Recarregue a página para ver as mudanças.',
+      });
+    }
+  };
+
   if (!isAdmin) {
     return null;
   }
@@ -218,6 +258,76 @@ export default function Admin() {
             <p className="text-muted-foreground">Gerencie usuários e permissões</p>
           </div>
         </div>
+
+        {/* Branding Card */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Branding
+            </CardTitle>
+            <CardDescription>Personalize a aparência do sistema</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="appName">Nome do App</Label>
+                <Input
+                  id="appName"
+                  value={branding.appName}
+                  onChange={(e) => setBranding({ ...branding, appName: e.target.value })}
+                  placeholder="WhatsApp Warmer"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="appSubtitle">Subtítulo</Label>
+                <Input
+                  id="appSubtitle"
+                  value={branding.appSubtitle}
+                  onChange={(e) => setBranding({ ...branding, appSubtitle: e.target.value })}
+                  placeholder="Sistema de Aquecimento"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="logoUrl" className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  URL do Logo
+                </Label>
+                <Input
+                  id="logoUrl"
+                  value={branding.logoUrl || ''}
+                  onChange={(e) => setBranding({ ...branding, logoUrl: e.target.value || null })}
+                  placeholder="https://exemplo.com/logo.png"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="primaryColor">Cor Primária</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="primaryColor"
+                    type="color"
+                    value={branding.primaryColor}
+                    onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
+                    className="w-14 h-10 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={branding.primaryColor}
+                    onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
+                    placeholder="#22c55e"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button onClick={handleSaveBranding} disabled={isSavingBranding}>
+                {isSavingBranding && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Branding
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

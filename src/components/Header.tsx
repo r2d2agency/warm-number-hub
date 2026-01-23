@@ -2,10 +2,24 @@ import { MessageSquare, Flame, Settings, LogOut, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { api, Branding } from "@/lib/api";
 
 export function Header() {
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [branding, setBranding] = useState<Branding>({
+    appName: 'WhatsApp Warmer',
+    appSubtitle: 'Sistema de Aquecimento',
+    primaryColor: '#22c55e',
+    logoUrl: null,
+  });
+
+  useEffect(() => {
+    api.getBranding().then(({ data }) => {
+      if (data) setBranding(data);
+    });
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -17,13 +31,21 @@ export function Header() {
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-2 md:gap-3">
           <div className="relative">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-primary/20 flex items-center justify-center glow-effect">
-              <Flame className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-            </div>
+            {branding.logoUrl ? (
+              <img 
+                src={branding.logoUrl} 
+                alt={branding.appName} 
+                className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl object-contain"
+              />
+            ) : (
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-primary/20 flex items-center justify-center glow-effect">
+                <Flame className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+              </div>
+            )}
           </div>
           <div>
-            <h1 className="text-sm md:text-lg font-bold text-foreground">WhatsApp Warmer</h1>
-            <p className="text-[10px] md:text-xs text-muted-foreground">Sistema de Aquecimento</p>
+            <h1 className="text-sm md:text-lg font-bold text-foreground">{branding.appName}</h1>
+            <p className="text-[10px] md:text-xs text-muted-foreground">{branding.appSubtitle}</p>
           </div>
         </div>
 
