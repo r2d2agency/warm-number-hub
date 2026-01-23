@@ -91,4 +91,66 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Check instance status from Evolution API
+router.post('/:id/check-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get instance details
+    const instanceResult = await db.query(
+      'SELECT * FROM instances WHERE id = $1 AND user_id = $2',
+      [id, req.user.userId]
+    );
+
+    if (instanceResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Instância não encontrada' });
+    }
+
+    const instance = instanceResult.rows[0];
+
+    // Call Evolution API to check connection status
+    const response = await fetch(`${instance.api_url}/instance/connectionState/${instance.name}`, {
+      method: 'GET',
+      headers: {
+        'apikey': instance.api_key,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      // Update status to disconnected if API call fails
+      await db.query(
+        'UPDATE instances SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['disconnected', id]
+      );
+      return res.json({ status: 'disconnected', message: 'Não foi possível conectar à API' });
+    }
+
+    const data = await response.json();
+    
+    // Determine status based on Evolution API response
+    let newStatus = 'disconnected';
+    if (data.instance?.state === 'open' || data.state === 'open') {
+      newStatus = 'connected';
+    } else if (data.instance?.state === 'connecting' || data.state === 'connecting') {
+      newStatus = 'warming';
+    }
+
+    // Update instance status in database
+    await db.query(
+      'UPDATE instances SET status = $1, updated_at = NOW() WHERE id = $2',
+      [newStatus, id]
+    );
+
+    res.json({ 
+      status: newStatus, 
+      rawState: data.instance?.state || data.state,
+      message: newStatus === 'connected' ? 'Conectado' : 'Desconectado'
+    });
+  } catch (error) {
+    console.error('Check instance status error:', error);
+    res.status(500).json({ message: 'Erro ao verificar status da instância' });
+  }
+});
+
 module.exports = router;
