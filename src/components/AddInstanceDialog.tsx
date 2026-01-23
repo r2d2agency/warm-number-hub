@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Instance } from "@/types/warming";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
 import { Plus, Server } from "lucide-react";
 
 interface AddInstanceDialogProps {
@@ -19,18 +20,31 @@ interface AddInstanceDialogProps {
 }
 
 export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }: AddInstanceDialogProps) {
-  const [name, setName] = useState(editingInstance?.name || "");
-  const [apiUrl, setApiUrl] = useState(editingInstance?.apiUrl || "");
-  const [apiKey, setApiKey] = useState(editingInstance?.apiKey || "");
-  const [phoneNumber, setPhoneNumber] = useState(editingInstance?.phoneNumber || "");
+  const [name, setName] = useState("");
+  const [apiUrl, setApiUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isPrimary, setIsPrimary] = useState(false);
+
+  useEffect(() => {
+    if (editingInstance) {
+      setName(editingInstance.name);
+      setApiUrl(editingInstance.apiUrl);
+      setApiKey(editingInstance.apiKey);
+      setPhoneNumber(editingInstance.phoneNumber || "");
+      setIsPrimary(editingInstance.isPrimary || false);
+    } else {
+      setName("");
+      setApiUrl("");
+      setApiKey("");
+      setPhoneNumber("");
+      setIsPrimary(false);
+    }
+  }, [editingInstance, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, apiUrl, apiKey, phoneNumber });
-    setName("");
-    setApiUrl("");
-    setApiKey("");
-    setPhoneNumber("");
+    onAdd({ name, apiUrl, apiKey, phoneNumber, isPrimary });
     onOpenChange(false);
   };
 
@@ -99,6 +113,17 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
               placeholder="5511999999999"
               className="bg-secondary border-border/50 focus:border-primary"
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isPrimary"
+              checked={isPrimary}
+              onCheckedChange={(checked) => setIsPrimary(checked === true)}
+            />
+            <Label htmlFor="isPrimary" className="text-sm text-muted-foreground cursor-pointer">
+              Definir como instância principal (número de aquecimento)
+            </Label>
           </div>
 
           <div className="flex gap-3 pt-4">

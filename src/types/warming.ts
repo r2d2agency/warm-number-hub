@@ -5,6 +5,10 @@ export interface Instance {
   apiKey: string;
   status: 'connected' | 'disconnected' | 'warming';
   phoneNumber?: string;
+  isPrimary?: boolean;
+  messagesSent?: number;
+  messagesReceived?: number;
+  lastActivity?: Date;
 }
 
 export interface WarmingNumber {
