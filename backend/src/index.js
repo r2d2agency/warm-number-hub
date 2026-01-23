@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const instancesRoutes = require('./routes/instances');
@@ -9,6 +10,7 @@ const clientNumbersRoutes = require('./routes/clientNumbers');
 const configRoutes = require('./routes/config');
 const warmingRoutes = require('./routes/warming');
 const brandingRoutes = require('./routes/branding');
+const uploadRoutes = require('./routes/upload');
 const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
@@ -17,6 +19,9 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -36,6 +41,7 @@ app.use('/api/messages', authenticateToken, messagesRoutes);
 app.use('/api/client-numbers', authenticateToken, clientNumbersRoutes);
 app.use('/api/config', authenticateToken, configRoutes);
 app.use('/api/warming-number', authenticateToken, warmingRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {
