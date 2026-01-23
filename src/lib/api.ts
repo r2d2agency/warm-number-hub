@@ -63,15 +63,21 @@ async function request<T>(
 export const api = {
   // Auth
   login: (email: string, password: string) =>
-    request<{ token: string; user: { id: string; email: string } }>('/auth/login', {
+    request<{ token: string; user: User; mustChangePassword?: boolean }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
 
   register: (email: string, password: string) =>
-    request<{ token: string; user: { id: string; email: string } }>('/auth/register', {
+    request<{ token: string; user: User }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+
+  changePassword: (newPassword: string) =>
+    request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
     }),
 
   logout: () => {
@@ -156,10 +162,51 @@ export const api = {
     request<WarmingConfig>('/config', {
       method: 'PUT',
       body: JSON.stringify(config),
+  }),
+
+  // Admin
+  getUsers: () =>
+    request<AdminUser[]>('/admin/users'),
+
+  createUser: (email: string, password?: string, role?: AppRole) =>
+    request<AdminUser>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, role }),
     }),
+
+  resetUserPassword: (userId: string, newPassword?: string) =>
+    request<{ message: string }>(`/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    }),
+
+  updateUserRole: (userId: string, role: AppRole) =>
+    request<{ message: string }>(`/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+
+  deleteUser: (userId: string) =>
+    request<{ message: string }>(`/admin/users/${userId}`, { method: 'DELETE' }),
 };
 
-// Types (re-export for convenience)
+// Types
+export type AppRole = 'superadmin' | 'admin' | 'user';
+
+export interface User {
+  id: string;
+  email: string;
+  roles?: AppRole[];
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  created_at: string;
+  must_change_password: boolean;
+  roles: AppRole[];
+}
+
 interface Instance {
   id: string;
   name: string;

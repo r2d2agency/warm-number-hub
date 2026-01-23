@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 const instancesRoutes = require('./routes/instances');
 const messagesRoutes = require('./routes/messages');
 const clientNumbersRoutes = require('./routes/clientNumbers');
@@ -23,6 +24,9 @@ app.get('/api/health', (req, res) => {
 
 // Public routes
 app.use('/api/auth', authRoutes);
+
+// Admin routes (tem seu próprio middleware de autenticação)
+app.use('/api/admin', adminRoutes);
 
 // Protected routes
 app.use('/api/instances', authenticateToken, instancesRoutes);

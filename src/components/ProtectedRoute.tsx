@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
@@ -7,7 +7,8 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, mustChangePassword } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -19,6 +20,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Se precisa trocar senha e não está na página de troca, redireciona
+  if (mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
   }
 
   return <>{children}</>;

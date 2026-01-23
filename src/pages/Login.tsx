@@ -57,25 +57,27 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email.trim() || !password.trim()) {
+    if (!email.trim()) {
       toast({
         title: 'Erro',
-        description: 'Preencha todos os campos',
+        description: 'Preencha o email',
         variant: 'destructive',
       });
       return;
     }
 
     setIsLoading(true);
-    const { error } = await login(email, password);
+    const result = await login(email, password);
     setIsLoading(false);
 
-    if (error) {
+    if (result.error) {
       toast({
         title: 'Erro ao entrar',
-        description: error,
+        description: result.error,
         variant: 'destructive',
       });
+    } else if (result.mustChangePassword) {
+      navigate('/change-password');
     } else {
       navigate('/');
     }
@@ -115,12 +117,15 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Deixe em branco se for primeiro acesso"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-secondary border-border/50 focus:border-primary"
                 disabled={isLoading}
               />
+              <p className="text-xs text-muted-foreground">
+                Primeiro acesso? Deixe a senha em branco.
+              </p>
             </div>
 
             <Button
