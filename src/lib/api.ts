@@ -1,0 +1,175 @@
+// API Client para conectar ao backend no Easypanel
+// Configure a variável de ambiente VITE_API_URL no Easypanel
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+}
+
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  try {
+    const token = localStorage.getItem('auth_token');
+    
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Request failed' }));
+      return { error: error.message || `Error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return { data };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Network error' };
+  }
+}
+
+export const api = {
+  // Auth
+  login: (email: string, password: string) =>
+    request<{ token: string; user: { id: string; email: string } }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+
+  register: (email: string, password: string) =>
+    request<{ token: string; user: { id: string; email: string } }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+
+  logout: () => {
+    localStorage.removeItem('auth_token');
+  },
+
+  // Instances
+  getInstances: () =>
+    request<Instance[]>('/instances'),
+
+  createInstance: (data: Omit<Instance, 'id' | 'status'>) =>
+    request<Instance>('/instances', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateInstance: (id: string, data: Partial<Instance>) =>
+    request<Instance>(`/instances/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteInstance: (id: string) =>
+    request<void>(`/instances/${id}`, { method: 'DELETE' }),
+
+  // Warming Numbers
+  getWarmingNumber: () =>
+    request<WarmingNumber>('/warming-number'),
+
+  setWarmingNumber: (phoneNumber: string) =>
+    request<WarmingNumber>('/warming-number', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    }),
+
+  toggleWarmingStatus: (id: string) =>
+    request<WarmingNumber>(`/warming-number/${id}/toggle`, { method: 'POST' }),
+
+  // Messages
+  getMessages: () =>
+    request<Message[]>('/messages'),
+
+  addMessage: (content: string) =>
+    request<Message>('/messages', {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+
+  deleteMessage: (id: string) =>
+    request<void>(`/messages/${id}`, { method: 'DELETE' }),
+
+  importMessages: (contents: string[]) =>
+    request<Message[]>('/messages/import', {
+      method: 'POST',
+      body: JSON.stringify({ contents }),
+    }),
+
+  // Client Numbers
+  getClientNumbers: () =>
+    request<ClientNumber[]>('/client-numbers'),
+
+  addClientNumber: (phoneNumber: string, name?: string) =>
+    request<ClientNumber>('/client-numbers', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, name }),
+    }),
+
+  deleteClientNumber: (id: string) =>
+    request<void>(`/client-numbers/${id}`, { method: 'DELETE' }),
+
+  importClientNumbers: (numbers: { phoneNumber: string; name?: string }[]) =>
+    request<ClientNumber[]>('/client-numbers/import', {
+      method: 'POST',
+      body: JSON.stringify({ numbers }),
+    }),
+
+  // Config
+  getConfig: () =>
+    request<WarmingConfig>('/config'),
+
+  updateConfig: (config: WarmingConfig) =>
+    request<WarmingConfig>('/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    }),
+};
+
+// Types (re-export for convenience)
+interface Instance {
+  id: string;
+  name: string;
+  apiUrl: string;
+  apiKey: string;
+  status: 'connected' | 'disconnected' | 'warming';
+  phoneNumber?: string;
+}
+
+interface WarmingNumber {
+  id: string;
+  phoneNumber: string;
+  status: 'idle' | 'warming' | 'paused';
+  messagesSent: number;
+  messagesReceived: number;
+  lastActivity?: Date;
+}
+
+interface Message {
+  id: string;
+  content: string;
+  type: 'incoming' | 'outgoing';
+}
+
+interface ClientNumber {
+  id: string;
+  phoneNumber: string;
+  name?: string;
+}
+
+interface WarmingConfig {
+  minDelaySeconds: number;
+  maxDelaySeconds: number;
+  messagesPerHour: number;
+  activeHoursStart: number;
+  activeHoursEnd: number;
+}
