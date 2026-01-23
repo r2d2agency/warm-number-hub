@@ -1,10 +1,10 @@
-import { MessageSquare, Flame, Settings, LogOut } from "lucide-react";
+import { MessageSquare, Flame, Settings, LogOut, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -32,6 +32,17 @@ export function Header() {
             <span className="text-xs md:text-sm text-muted-foreground hidden sm:block">
               {user.email}
             </span>
+          )}
+          {isAdmin && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-muted-foreground hover:text-primary h-8 w-8 md:h-10 md:w-10"
+              onClick={() => navigate('/admin')}
+              title="Administração"
+            >
+              <Shield className="w-4 h-4 md:w-5 md:h-5" />
+            </Button>
           )}
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-8 w-8 md:h-10 md:w-10">
             <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
