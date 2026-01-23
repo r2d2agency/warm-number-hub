@@ -1,5 +1,7 @@
-// API Client - usa proxy do nginx em produção
-const API_URL = '/api';
+// API Client
+// - Em produção (Nginx): use "/api" (mesma origem)
+// - Em preview/dev sem proxy: defina VITE_API_URL (ex: https://seu-dominio.com/api)
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
 interface ApiResponse<T> {
   data?: T;
@@ -23,8 +25,23 @@ async function request<T>(
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      return { error: error.message || `Error: ${response.status}` };
+      // Tenta extrair uma mensagem amigável, mesmo quando o backend retorna HTML/texto.
+      const contentType = response.headers.get('content-type') || '';
+      let message = `Erro ${response.status}`;
+
+      try {
+        if (contentType.includes('application/json')) {
+          const body = await response.json();
+          message = body?.message || body?.error || message;
+        } else {
+          const text = await response.text();
+          message = text?.trim()?.slice(0, 200) || message;
+        }
+      } catch {
+        // mantém message padrão
+      }
+
+      return { error: message };
     }
 
     const data = await response.json();
