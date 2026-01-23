@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const warmingService = require('../services/warmingService');
 
 const router = express.Router();
 
@@ -49,7 +50,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Toggle warming status
+// Toggle warming status (legacy)
 router.post('/:id/toggle', async (req, res) => {
   try {
     const { id } = req.params;
@@ -77,6 +78,75 @@ router.post('/:id/toggle', async (req, res) => {
   } catch (error) {
     console.error('Toggle warming status error:', error);
     res.status(500).json({ message: 'Erro ao alterar status' });
+  }
+});
+
+// ========== NEW: Warming Control Endpoints ==========
+
+// Get warming status
+router.get('/status', async (req, res) => {
+  try {
+    const status = warmingService.getWarmingStatus(req.user.userId);
+    res.json(status);
+  } catch (error) {
+    console.error('Get warming status error:', error);
+    res.status(500).json({ message: 'Erro ao buscar status do aquecimento' });
+  }
+});
+
+// Start warming
+router.post('/start', async (req, res) => {
+  try {
+    const result = await warmingService.startWarming(req.user.userId);
+    
+    if (!result.success) {
+      return res.status(400).json({ message: result.error });
+    }
+    
+    res.json({ message: result.message, isActive: true });
+  } catch (error) {
+    console.error('Start warming error:', error);
+    res.status(500).json({ message: 'Erro ao iniciar aquecimento' });
+  }
+});
+
+// Stop warming
+router.post('/stop', async (req, res) => {
+  try {
+    const result = await warmingService.stopWarming(req.user.userId);
+    res.json({ message: result.message, isActive: false });
+  } catch (error) {
+    console.error('Stop warming error:', error);
+    res.status(500).json({ message: 'Erro ao parar aquecimento' });
+  }
+});
+
+// Get warming logs
+router.get('/logs', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    
+    const result = await db.query(
+      `SELECT * FROM warming_logs 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC 
+       LIMIT $2`,
+      [req.user.userId, limit]
+    );
+    
+    res.json(result.rows.map(row => ({
+      id: row.id,
+      action: row.action,
+      details: row.details,
+      createdAt: row.created_at
+    })));
+  } catch (error) {
+    // Table might not exist yet
+    if (error.message.includes('does not exist')) {
+      return res.json([]);
+    }
+    console.error('Get warming logs error:', error);
+    res.status(500).json({ message: 'Erro ao buscar logs' });
   }
 });
 

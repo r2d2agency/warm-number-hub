@@ -37,6 +37,7 @@ export default function Index() {
   const [isAddInstanceOpen, setIsAddInstanceOpen] = useState(false);
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null);
   const [isWarming, setIsWarming] = useState(false);
+  const [isTogglingWarming, setIsTogglingWarming] = useState(false);
 
   // Get the primary instance (warming number)
   const primaryInstance = instances.find(i => i.isPrimary);
@@ -45,17 +46,19 @@ export default function Index() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [instancesRes, messagesRes, clientsRes, configRes] = await Promise.all([
+      const [instancesRes, messagesRes, clientsRes, configRes, warmingStatusRes] = await Promise.all([
         api.getInstances(),
         api.getMessages(),
         api.getClientNumbers(),
         api.getConfig(),
+        api.getWarmingStatus(),
       ]);
 
       if (instancesRes.data) setInstances(instancesRes.data);
       if (messagesRes.data) setMessages(messagesRes.data);
       if (clientsRes.data) setClientNumbers(clientsRes.data);
       if (configRes.data) setConfig(configRes.data);
+      if (warmingStatusRes.data) setIsWarming(warmingStatusRes.data.isActive);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');
@@ -207,12 +210,35 @@ export default function Index() {
     }
   };
 
-  const handleToggleWarming = () => {
-    setIsWarming(prev => {
-      const newState = !prev;
-      toast.success(newState ? 'Aquecimento iniciado' : 'Aquecimento pausado');
-      return newState;
-    });
+  const handleToggleWarming = async () => {
+    setIsTogglingWarming(true);
+    try {
+      if (isWarming) {
+        const { data, error } = await api.stopWarming();
+        if (error) {
+          toast.error(error);
+          return;
+        }
+        if (data) {
+          setIsWarming(false);
+          toast.success('Aquecimento pausado');
+        }
+      } else {
+        const { data, error } = await api.startWarming();
+        if (error) {
+          toast.error(error);
+          return;
+        }
+        if (data) {
+          setIsWarming(true);
+          toast.success('Aquecimento iniciado');
+        }
+      }
+    } catch (error) {
+      toast.error('Erro ao alterar status do aquecimento');
+    } finally {
+      setIsTogglingWarming(false);
+    }
   };
 
   if (isLoading) {
@@ -339,6 +365,7 @@ export default function Index() {
               onConfigChange={handleConfigChange} 
               isWarming={isWarming}
               onToggleWarming={handleToggleWarming}
+              isTogglingWarming={isTogglingWarming}
             />
             <ClientNumbersList
               numbers={clientNumbers}
