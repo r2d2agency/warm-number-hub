@@ -94,6 +94,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  setInstanceAsPrimary: (id: string) =>
+    request<Instance>(`/instances/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ isPrimary: true }),
+    }),
+
   updateInstance: (id: string, data: Partial<Instance>) =>
     request<Instance>(`/instances/${id}`, {
       method: 'PUT',
@@ -217,6 +223,10 @@ interface Instance {
   apiKey: string;
   status: 'connected' | 'disconnected' | 'warming';
   phoneNumber?: string;
+  isPrimary?: boolean;
+  messagesSent?: number;
+  messagesReceived?: number;
+  lastActivity?: Date;
 }
 
 interface WarmingNumber {

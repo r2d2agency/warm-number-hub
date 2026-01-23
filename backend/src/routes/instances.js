@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT * FROM instances WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM instances WHERE user_id = $1 ORDER BY is_primary DESC, created_at DESC',
       [req.user.userId]
     );
     res.json(result.rows);
@@ -20,17 +20,25 @@ router.get('/', async (req, res) => {
 // Create instance
 router.post('/', async (req, res) => {
   try {
-    const { name, apiUrl, apiKey, phoneNumber } = req.body;
+    const { name, apiUrl, apiKey, phoneNumber, isPrimary } = req.body;
 
     if (!name || !apiUrl || !apiKey) {
       return res.status(400).json({ message: 'Nome, URL e API Key são obrigatórios' });
     }
 
+    // If setting as primary, unset other primary instances first
+    if (isPrimary) {
+      await db.query(
+        'UPDATE instances SET is_primary = FALSE WHERE user_id = $1',
+        [req.user.userId]
+      );
+    }
+
     const result = await db.query(
-      `INSERT INTO instances (user_id, name, api_url, api_key, phone_number, status)
-       VALUES ($1, $2, $3, $4, $5, 'disconnected')
+      `INSERT INTO instances (user_id, name, api_url, api_key, phone_number, status, is_primary)
+       VALUES ($1, $2, $3, $4, $5, 'disconnected', $6)
        RETURNING *`,
-      [req.user.userId, name, apiUrl, apiKey, phoneNumber]
+      [req.user.userId, name, apiUrl, apiKey, phoneNumber, isPrimary || false]
     );
 
     res.status(201).json(result.rows[0]);
@@ -44,7 +52,15 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, apiUrl, apiKey, phoneNumber, status } = req.body;
+    const { name, apiUrl, apiKey, phoneNumber, status, isPrimary } = req.body;
+
+    // If setting as primary, unset other primary instances first
+    if (isPrimary === true) {
+      await db.query(
+        'UPDATE instances SET is_primary = FALSE WHERE user_id = $1 AND id != $2',
+        [req.user.userId, id]
+      );
+    }
 
     const result = await db.query(
       `UPDATE instances 
@@ -53,10 +69,11 @@ router.put('/:id', async (req, res) => {
            api_key = COALESCE($3, api_key),
            phone_number = COALESCE($4, phone_number),
            status = COALESCE($5, status),
+           is_primary = COALESCE($6, is_primary),
            updated_at = NOW()
-       WHERE id = $6 AND user_id = $7
+       WHERE id = $7 AND user_id = $8
        RETURNING *`,
-      [name, apiUrl, apiKey, phoneNumber, status, id, req.user.userId]
+      [name, apiUrl, apiKey, phoneNumber, status, isPrimary, id, req.user.userId]
     );
 
     if (result.rows.length === 0) {
