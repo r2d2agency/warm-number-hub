@@ -220,6 +220,36 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(branding),
     }),
+
+  // Upload
+  uploadLogo: async (file: File): Promise<{ data?: { logoUrl: string }; error?: string }> => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      const response = await fetch(`${API_URL}/upload/logo`, {
+        method: 'POST',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        return { error: body?.message || `Erro ${response.status}` };
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Network error' };
+    }
+  },
+
+  deleteLogo: () =>
+    request<{ success: boolean }>('/upload/logo', { method: 'DELETE' }),
 };
 
 // Types

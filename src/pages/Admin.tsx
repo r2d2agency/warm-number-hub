@@ -35,7 +35,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Key, Trash2, Shield, Users, ArrowLeft, Palette, Image, Save } from 'lucide-react';
+import { Loader2, Plus, Key, Trash2, Shield, Users, ArrowLeft, Palette, Image, Save, Upload, X } from 'lucide-react';
 
 export default function Admin() {
   const { isAdmin, isSuperAdmin, user } = useAuth();
@@ -65,6 +65,7 @@ export default function Admin() {
     logoUrl: null,
   });
   const [isSavingBranding, setIsSavingBranding] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -239,6 +240,73 @@ export default function Admin() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Arquivo inválido',
+        description: 'Por favor, selecione uma imagem.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Arquivo muito grande',
+        description: 'O tamanho máximo é 5MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    const { data, error } = await api.uploadLogo(file);
+    setIsUploadingLogo(false);
+
+    if (error) {
+      toast({
+        title: 'Erro ao fazer upload',
+        description: error,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (data) {
+      setBranding((prev) => ({ ...prev, logoUrl: data.logoUrl }));
+      toast({
+        title: 'Logo atualizado',
+        description: 'O logo foi enviado com sucesso.',
+      });
+    }
+
+    // Clear input
+    e.target.value = '';
+  };
+
+  const handleRemoveLogo = async () => {
+    const { error } = await api.deleteLogo();
+
+    if (error) {
+      toast({
+        title: 'Erro ao remover logo',
+        description: error,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setBranding((prev) => ({ ...prev, logoUrl: null }));
+    toast({
+      title: 'Logo removido',
+    });
+  };
+
   if (!isAdmin) {
     return null;
   }
@@ -288,17 +356,56 @@ export default function Admin() {
                   placeholder="Sistema de Aquecimento"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="logoUrl" className="flex items-center gap-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label className="flex items-center gap-2">
                   <Image className="h-4 w-4" />
-                  URL do Logo
+                  Logo
                 </Label>
-                <Input
-                  id="logoUrl"
-                  value={branding.logoUrl || ''}
-                  onChange={(e) => setBranding({ ...branding, logoUrl: e.target.value || null })}
-                  placeholder="https://exemplo.com/logo.png"
-                />
+                <div className="flex items-center gap-4">
+                  {branding.logoUrl ? (
+                    <div className="relative">
+                      <img
+                        src={branding.logoUrl.startsWith('/') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${branding.logoUrl}` : branding.logoUrl}
+                        alt="Logo"
+                        className="h-16 w-16 object-contain rounded border bg-background"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={handleRemoveLogo}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="h-16 w-16 rounded border border-dashed border-muted-foreground/50 flex items-center justify-center">
+                      <Image className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="logo-upload"
+                      className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                    >
+                      {isUploadingLogo ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      {isUploadingLogo ? 'Enviando...' : 'Fazer Upload'}
+                    </Label>
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                      disabled={isUploadingLogo}
+                    />
+                    <span className="text-xs text-muted-foreground">PNG, JPG até 5MB</span>
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="primaryColor">Cor Primária</Label>
