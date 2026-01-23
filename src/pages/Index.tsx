@@ -36,6 +36,7 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddInstanceOpen, setIsAddInstanceOpen] = useState(false);
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null);
+  const [isWarming, setIsWarming] = useState(false);
 
   // Get the primary instance (warming number)
   const primaryInstance = instances.find(i => i.isPrimary);
@@ -206,6 +207,14 @@ export default function Index() {
     }
   };
 
+  const handleToggleWarming = () => {
+    setIsWarming(prev => {
+      const newState = !prev;
+      toast.success(newState ? 'Aquecimento iniciado' : 'Aquecimento pausado');
+      return newState;
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -325,7 +334,12 @@ export default function Index() {
 
           {/* Right Column - Config & Clients */}
           <div className="space-y-4 md:space-y-6">
-            <ConfigPanel config={config} onConfigChange={handleConfigChange} />
+            <ConfigPanel 
+              config={config} 
+              onConfigChange={handleConfigChange} 
+              isWarming={isWarming}
+              onToggleWarming={handleToggleWarming}
+            />
             <ClientNumbersList
               numbers={clientNumbers}
               onAddNumber={handleAddClientNumber}

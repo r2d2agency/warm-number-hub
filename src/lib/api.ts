@@ -197,6 +197,16 @@ export const api = {
 
   deleteUser: (userId: string) =>
     request<{ message: string }>(`/admin/users/${userId}`, { method: 'DELETE' }),
+
+  // Branding
+  getBranding: () =>
+    request<Branding>('/branding'),
+
+  updateBranding: (branding: Partial<Branding>) =>
+    request<Branding>('/branding', {
+      method: 'PUT',
+      body: JSON.stringify(branding),
+    }),
 };
 
 // Types
@@ -256,4 +266,12 @@ interface WarmingConfig {
   messagesPerHour: number;
   activeHoursStart: number;
   activeHoursEnd: number;
+}
+
+export interface Branding {
+  id?: string;
+  logoUrl?: string | null;
+  appName: string;
+  appSubtitle: string;
+  primaryColor: string;
 }

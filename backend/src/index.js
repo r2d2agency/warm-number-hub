@@ -8,6 +8,7 @@ const messagesRoutes = require('./routes/messages');
 const clientNumbersRoutes = require('./routes/clientNumbers');
 const configRoutes = require('./routes/config');
 const warmingRoutes = require('./routes/warming');
+const brandingRoutes = require('./routes/branding');
 const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
@@ -24,6 +25,7 @@ app.get('/api/health', (req, res) => {
 
 // Public routes
 app.use('/api/auth', authRoutes);
+app.use('/api/branding', brandingRoutes);
 
 // Admin routes (tem seu próprio middleware de autenticação)
 app.use('/api/admin', adminRoutes);
