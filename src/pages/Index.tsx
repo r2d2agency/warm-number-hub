@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Instance, WarmingNumber, Message, WarmingConfig, ClientNumber } from "@/types/warming";
 import { Header } from "@/components/Header";
 import { StatsCard } from "@/components/StatsCard";
@@ -11,55 +11,23 @@ import { ClientNumbersList } from "@/components/ClientNumbersList";
 import { FlowVisualization } from "@/components/FlowVisualization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 import { 
   Server, 
   MessageSquare, 
   Flame, 
   Activity, 
   Plus,
-  Phone
+  Phone,
+  Loader2
 } from "lucide-react";
 
 export default function Index() {
-  const [instances, setInstances] = useState<Instance[]>([
-    {
-      id: "1",
-      name: "Instância A",
-      apiUrl: "https://api.evolution.com/instance-a",
-      apiKey: "key-a",
-      status: "connected",
-      phoneNumber: "5511999999991",
-    },
-    {
-      id: "2",
-      name: "Instância B",
-      apiUrl: "https://api.evolution.com/instance-b",
-      apiKey: "key-b",
-      status: "warming",
-      phoneNumber: "5511999999992",
-    },
-  ]);
-
-  const [warmingNumber, setWarmingNumber] = useState<WarmingNumber>({
-    id: "1",
-    phoneNumber: "5511988888888",
-    status: "warming",
-    messagesSent: 45,
-    messagesReceived: 128,
-    lastActivity: new Date(),
-  });
-
-  const [messages, setMessages] = useState<Message[]>([
-    { id: "1", content: "Olá, tudo bem?", type: "outgoing" },
-    { id: "2", content: "Oi! Sim, e você?", type: "incoming" },
-    { id: "3", content: "Tudo ótimo, obrigado!", type: "outgoing" },
-  ]);
-
-  const [clientNumbers, setClientNumbers] = useState<ClientNumber[]>([
-    { id: "1", phoneNumber: "5511977777777", name: "Cliente 1" },
-    { id: "2", phoneNumber: "5511966666666", name: "Cliente 2" },
-  ]);
-
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const [warmingNumber, setWarmingNumber] = useState<WarmingNumber | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [clientNumbers, setClientNumbers] = useState<ClientNumber[]>([]);
   const [config, setConfig] = useState<WarmingConfig>({
     minDelaySeconds: 60,
     maxDelaySeconds: 180,
@@ -68,17 +36,64 @@ export default function Index() {
     activeHoursEnd: 22,
   });
 
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddInstanceOpen, setIsAddInstanceOpen] = useState(false);
   const [editingInstance, setEditingInstance] = useState<Instance | null>(null);
   const [newWarmingPhone, setNewWarmingPhone] = useState("");
 
-  const handleAddInstance = (data: Omit<Instance, 'id' | 'status'>) => {
-    const newInstance: Instance = {
-      ...data,
-      id: Date.now().toString(),
-      status: 'disconnected',
-    };
-    setInstances([...instances, newInstance]);
+  // Fetch all data on mount
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [instancesRes, warmingRes, messagesRes, clientsRes, configRes] = await Promise.all([
+        api.getInstances(),
+        api.getWarmingNumber(),
+        api.getMessages(),
+        api.getClientNumbers(),
+        api.getConfig(),
+      ]);
+
+      if (instancesRes.data) setInstances(instancesRes.data);
+      if (warmingRes.data) setWarmingNumber(warmingRes.data);
+      if (messagesRes.data) setMessages(messagesRes.data);
+      if (clientsRes.data) setClientNumbers(clientsRes.data);
+      if (configRes.data) setConfig(configRes.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Erro ao carregar dados');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleAddInstance = async (data: Omit<Instance, 'id' | 'status'>) => {
+    if (editingInstance) {
+      // Update existing
+      const { data: updated, error } = await api.updateInstance(editingInstance.id, data);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      if (updated) {
+        setInstances(instances.map(i => i.id === editingInstance.id ? updated : i));
+        toast.success('Instância atualizada');
+      }
+    } else {
+      // Create new
+      const { data: created, error } = await api.createInstance(data);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      if (created) {
+        setInstances([...instances, created]);
+        toast.success('Instância criada');
+      }
+    }
   };
 
   const handleEditInstance = (instance: Instance) => {
@@ -86,79 +101,136 @@ export default function Index() {
     setIsAddInstanceOpen(true);
   };
 
-  const handleDeleteInstance = (id: string) => {
+  const handleDeleteInstance = async (id: string) => {
+    const { error } = await api.deleteInstance(id);
+    if (error) {
+      toast.error(error);
+      return;
+    }
     setInstances(instances.filter(i => i.id !== id));
+    toast.success('Instância removida');
   };
 
   const handleStatusUpdate = (id: string, status: Instance['status']) => {
     setInstances(instances.map(i => i.id === id ? { ...i, status } : i));
   };
 
-  const handleToggleWarmingStatus = (id: string) => {
-    if (warmingNumber && warmingNumber.id === id) {
-      setWarmingNumber({
-        ...warmingNumber,
-        status: warmingNumber.status === 'warming' ? 'paused' : 'warming',
-      });
+  const handleToggleWarmingStatus = async (id: string) => {
+    if (!warmingNumber || warmingNumber.id !== id) return;
+    
+    const { data, error } = await api.toggleWarmingStatus(id);
+    
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    
+    if (data) {
+      setWarmingNumber(data);
+      toast.success(data.status === 'warming' ? 'Aquecimento iniciado' : 'Aquecimento pausado');
     }
   };
 
-  const handleAddMessage = (content: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      type: 'outgoing',
-    };
-    setMessages([...messages, newMessage]);
+  const handleAddMessage = async (content: string) => {
+    const { data, error } = await api.addMessage(content);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (data) {
+      setMessages([...messages, data]);
+      toast.success('Mensagem adicionada');
+    }
   };
 
-  const handleDeleteMessage = (id: string) => {
+  const handleDeleteMessage = async (id: string) => {
+    const { error } = await api.deleteMessage(id);
+    if (error) {
+      toast.error(error);
+      return;
+    }
     setMessages(messages.filter(m => m.id !== id));
   };
 
-  const handleImportMessages = (contents: string[]) => {
-    const newMessages: Message[] = contents.map((content, index) => ({
-      id: `${Date.now()}-${index}`,
-      content,
-      type: 'outgoing',
-    }));
-    setMessages([...messages, ...newMessages].slice(0, 100));
+  const handleImportMessages = async (contents: string[]) => {
+    const { data, error } = await api.importMessages(contents);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (data) {
+      setMessages([...messages, ...data]);
+      toast.success(`${data.length} mensagens importadas`);
+    }
   };
 
-  const handleAddClientNumber = (phoneNumber: string, name?: string) => {
-    const newClient: ClientNumber = {
-      id: Date.now().toString(),
-      phoneNumber,
-      name,
-    };
-    setClientNumbers([...clientNumbers, newClient]);
+  const handleAddClientNumber = async (phoneNumber: string, name?: string) => {
+    const { data, error } = await api.addClientNumber(phoneNumber, name);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (data) {
+      setClientNumbers([...clientNumbers, data]);
+      toast.success('Número adicionado');
+    }
   };
 
-  const handleDeleteClientNumber = (id: string) => {
+  const handleDeleteClientNumber = async (id: string) => {
+    const { error } = await api.deleteClientNumber(id);
+    if (error) {
+      toast.error(error);
+      return;
+    }
     setClientNumbers(clientNumbers.filter(c => c.id !== id));
   };
 
-  const handleImportClientNumbers = (numbers: { phoneNumber: string; name?: string }[]) => {
-    const newClients: ClientNumber[] = numbers.map((n, index) => ({
-      id: `${Date.now()}-${index}`,
-      phoneNumber: n.phoneNumber,
-      name: n.name,
-    }));
-    setClientNumbers([...clientNumbers, ...newClients]);
-  };
-
-  const handleSetWarmingNumber = () => {
-    if (newWarmingPhone.trim()) {
-      setWarmingNumber({
-        id: Date.now().toString(),
-        phoneNumber: newWarmingPhone.trim(),
-        status: 'idle',
-        messagesSent: 0,
-        messagesReceived: 0,
-      });
-      setNewWarmingPhone("");
+  const handleImportClientNumbers = async (numbers: { phoneNumber: string; name?: string }[]) => {
+    const { data, error } = await api.importClientNumbers(numbers);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (data) {
+      setClientNumbers([...clientNumbers, ...data]);
+      toast.success(`${data.length} números importados`);
     }
   };
+
+  const handleSetWarmingNumber = async () => {
+    if (!newWarmingPhone.trim()) return;
+    
+    const { data, error } = await api.setWarmingNumber(newWarmingPhone.trim());
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (data) {
+      setWarmingNumber(data);
+      setNewWarmingPhone("");
+      toast.success('Número de aquecimento definido');
+    }
+  };
+
+  const handleConfigChange = async (newConfig: WarmingConfig) => {
+    const { data, error } = await api.updateConfig(newConfig);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (data) {
+      setConfig(data);
+      toast.success('Configuração salva');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -272,7 +344,7 @@ export default function Index() {
 
           {/* Right Column - Config & Clients */}
           <div className="space-y-4 md:space-y-6">
-            <ConfigPanel config={config} onConfigChange={setConfig} />
+            <ConfigPanel config={config} onConfigChange={handleConfigChange} />
             <ClientNumbersList
               numbers={clientNumbers}
               onAddNumber={handleAddClientNumber}
