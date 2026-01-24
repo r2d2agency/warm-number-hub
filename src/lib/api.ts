@@ -237,8 +237,22 @@ export const api = {
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        return { error: body?.message || `Erro ${response.status}` };
+        const contentType = response.headers.get('content-type') || '';
+        let message = `Erro ${response.status}`;
+
+        try {
+          if (contentType.includes('application/json')) {
+            const body = await response.json().catch(() => ({}));
+            message = body?.message || body?.error || message;
+          } else {
+            const text = await response.text().catch(() => '');
+            message = text?.trim()?.slice(0, 200) || message;
+          }
+        } catch {
+          // keep default message
+        }
+
+        return { error: message };
       }
 
       const data = await response.json();
