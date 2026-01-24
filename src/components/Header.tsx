@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { api, Branding } from "@/lib/api";
+import { api, Branding, getApiBaseUrl } from "@/lib/api";
 
 export function Header() {
   const { user, logout, isAdmin } = useAuth();
@@ -21,6 +21,17 @@ export function Header() {
     });
   }, []);
 
+  const apiOrigin =
+    typeof window !== 'undefined'
+      ? new URL(getApiBaseUrl(), window.location.origin).origin
+      : '';
+
+  const logoSrc = branding.logoUrl
+    ? branding.logoUrl.startsWith('/')
+      ? `${apiOrigin}${branding.logoUrl}`
+      : branding.logoUrl
+    : null;
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -33,7 +44,7 @@ export function Header() {
           <div className="relative">
             {branding.logoUrl ? (
               <img 
-                src={branding.logoUrl} 
+                src={logoSrc ?? ''} 
                 alt={branding.appName} 
                 className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl object-contain"
               />
