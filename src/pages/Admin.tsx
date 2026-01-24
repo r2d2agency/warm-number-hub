@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { api, AdminUser, AppRole, Branding } from '@/lib/api';
+import { api, AdminUser, AppRole, Branding, getApiBaseUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,6 +66,17 @@ export default function Admin() {
   });
   const [isSavingBranding, setIsSavingBranding] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const apiOrigin =
+    typeof window !== 'undefined'
+      ? new URL(getApiBaseUrl(), window.location.origin).origin
+      : '';
+
+  const logoSrc = branding.logoUrl
+    ? branding.logoUrl.startsWith('/')
+      ? `${apiOrigin}${branding.logoUrl}`
+      : branding.logoUrl
+    : null;
 
   useEffect(() => {
     if (!isAdmin) {
@@ -365,7 +376,7 @@ export default function Admin() {
                   {branding.logoUrl ? (
                     <div className="relative">
                       <img
-                        src={branding.logoUrl.startsWith('/') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${branding.logoUrl}` : branding.logoUrl}
+                        src={logoSrc ?? ''}
                         alt="Logo"
                         className="h-16 w-16 object-contain rounded border bg-background"
                       />
