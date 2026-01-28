@@ -6,6 +6,8 @@ export interface Instance {
   status: 'connected' | 'disconnected' | 'warming';
   phoneNumber?: string;
   isPrimary?: boolean;
+  isGlobal?: boolean;
+  isOwner?: boolean; // true if current user owns this instance
   messagesSent?: number;
   messagesReceived?: number;
   lastActivity?: Date;

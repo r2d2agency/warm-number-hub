@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Instance } from "@/types/warming";
-import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit, RefreshCw, Star, StarOff } from "lucide-react";
+import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit, RefreshCw, Star, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
 } from "./ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface InstanceCardProps {
   instance: Instance;
@@ -21,7 +22,12 @@ interface InstanceCardProps {
 }
 
 export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSetPrimary }: InstanceCardProps) {
+  const { user } = useAuth();
   const [checking, setChecking] = useState(false);
+  
+  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('superadmin');
+  const canEdit = instance.isOwner || isAdmin;
+  const canDelete = instance.isOwner || isAdmin;
 
   const statusConfig = {
     connected: {
@@ -83,6 +89,12 @@ export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSet
                   PRINCIPAL
                 </span>
               )}
+              {instance.isGlobal && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] md:text-[10px] font-medium bg-blue-500/20 text-blue-500 flex items-center gap-1">
+                  <Globe className="w-2.5 h-2.5" />
+                  GLOBAL
+                </span>
+              )}
             </div>
             <p className="text-[10px] md:text-xs text-muted-foreground truncate">{instance.phoneNumber || 'Sem número'}</p>
           </div>
@@ -120,17 +132,27 @@ export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSet
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onEdit(instance)} className="cursor-pointer">
-                <Edit className="w-4 h-4 mr-2" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onDelete(instance.id)} 
-                className="cursor-pointer text-destructive focus:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Remover
-              </DropdownMenuItem>
+              {canEdit && (
+                <DropdownMenuItem onClick={() => onEdit(instance)} className="cursor-pointer">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+              )}
+              {!canEdit && (
+                <DropdownMenuItem onClick={() => onEdit(instance)} className="cursor-pointer">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Visualizar
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem 
+                  onClick={() => onDelete(instance.id)} 
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Remover
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

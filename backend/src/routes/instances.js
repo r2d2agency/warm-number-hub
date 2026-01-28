@@ -4,7 +4,7 @@ const db = require('../db');
 const router = express.Router();
 
 // Convert snake_case DB row to camelCase for frontend
-function formatInstance(row) {
+function formatInstance(row, currentUserId) {
   return {
     id: row.id,
     name: row.name,
@@ -13,6 +13,8 @@ function formatInstance(row) {
     phoneNumber: row.phone_number,
     status: row.status,
     isPrimary: row.is_primary || false,
+    isGlobal: row.is_global || false,
+    isOwner: row.user_id === currentUserId,
     messagesSent: row.messages_sent || 0,
     messagesReceived: row.messages_received || 0,
     lastActivity: row.last_activity,
@@ -21,14 +23,25 @@ function formatInstance(row) {
   };
 }
 
-// Get all instances for user
+// Check if user is admin/superadmin
+async function isUserAdmin(userId) {
+  const result = await db.query(
+    `SELECT role FROM user_roles WHERE user_id = $1 AND role IN ('superadmin', 'admin')`,
+    [userId]
+  );
+  return result.rows.length > 0;
+}
+
+// Get all instances for user (own instances + global instances)
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT * FROM instances WHERE user_id = $1 ORDER BY is_primary DESC, created_at DESC',
+      `SELECT * FROM instances 
+       WHERE user_id = $1 OR is_global = TRUE 
+       ORDER BY is_global ASC, is_primary DESC, created_at DESC`,
       [req.user.userId]
     );
-    res.json(result.rows.map(formatInstance));
+    res.json(result.rows.map(row => formatInstance(row, req.user.userId)));
   } catch (error) {
     console.error('Get instances error:', error);
     res.status(500).json({ message: 'Erro ao buscar instâncias' });
@@ -38,10 +51,20 @@ router.get('/', async (req, res) => {
 // Create instance
 router.post('/', async (req, res) => {
   try {
-    const { name, apiUrl, apiKey, phoneNumber, isPrimary } = req.body;
+    const { name, apiUrl, apiKey, phoneNumber, isPrimary, isGlobal } = req.body;
 
     if (!name || !apiUrl || !apiKey) {
       return res.status(400).json({ message: 'Nome, URL e API Key são obrigatórios' });
+    }
+
+    // Only admins can create global instances
+    let shouldBeGlobal = false;
+    if (isGlobal) {
+      const adminCheck = await isUserAdmin(req.user.userId);
+      if (!adminCheck) {
+        return res.status(403).json({ message: 'Apenas administradores podem criar instâncias globais' });
+      }
+      shouldBeGlobal = true;
     }
 
     // If setting as primary, unset other primary instances first
@@ -53,13 +76,13 @@ router.post('/', async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO instances (user_id, name, api_url, api_key, phone_number, status, is_primary)
-       VALUES ($1, $2, $3, $4, $5, 'disconnected', $6)
+      `INSERT INTO instances (user_id, name, api_url, api_key, phone_number, status, is_primary, is_global)
+       VALUES ($1, $2, $3, $4, $5, 'disconnected', $6, $7)
        RETURNING *`,
-      [req.user.userId, name, apiUrl, apiKey, phoneNumber, isPrimary || false]
+      [req.user.userId, name, apiUrl, apiKey, phoneNumber, isPrimary || false, shouldBeGlobal]
     );
 
-    res.status(201).json(formatInstance(result.rows[0]));
+    res.status(201).json(formatInstance(result.rows[0], req.user.userId));
   } catch (error) {
     console.error('Create instance error:', error);
     res.status(500).json({ message: 'Erro ao criar instância' });
@@ -70,7 +93,32 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, apiUrl, apiKey, phoneNumber, status, isPrimary } = req.body;
+    const { name, apiUrl, apiKey, phoneNumber, status, isPrimary, isGlobal } = req.body;
+
+    // Check ownership or admin access
+    const ownerCheck = await db.query(
+      'SELECT user_id, is_global FROM instances WHERE id = $1',
+      [id]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Instância não encontrada' });
+    }
+
+    const instance = ownerCheck.rows[0];
+    const isAdmin = await isUserAdmin(req.user.userId);
+    const isOwner = instance.user_id === req.user.userId;
+
+    // Only owner or admin can update
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Sem permissão para editar esta instância' });
+    }
+
+    // Only admins can change global status
+    let newGlobalStatus = instance.is_global;
+    if (isGlobal !== undefined && isAdmin) {
+      newGlobalStatus = isGlobal;
+    }
 
     // If setting as primary, unset other primary instances first
     if (isPrimary === true) {
@@ -88,17 +136,18 @@ router.put('/:id', async (req, res) => {
            phone_number = COALESCE($4, phone_number),
            status = COALESCE($5, status),
            is_primary = COALESCE($6, is_primary),
+           is_global = $7,
            updated_at = NOW()
-       WHERE id = $7 AND user_id = $8
+       WHERE id = $8
        RETURNING *`,
-      [name, apiUrl, apiKey, phoneNumber, status, isPrimary, id, req.user.userId]
+      [name, apiUrl, apiKey, phoneNumber, status, isPrimary, newGlobalStatus, id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Instância não encontrada' });
     }
 
-    res.json(formatInstance(result.rows[0]));
+    res.json(formatInstance(result.rows[0], req.user.userId));
   } catch (error) {
     console.error('Update instance error:', error);
     res.status(500).json({ message: 'Erro ao atualizar instância' });
@@ -110,14 +159,24 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await db.query(
-      'DELETE FROM instances WHERE id = $1 AND user_id = $2 RETURNING id',
-      [id, req.user.userId]
+    // Check ownership or admin access
+    const ownerCheck = await db.query(
+      'SELECT user_id FROM instances WHERE id = $1',
+      [id]
     );
 
-    if (result.rows.length === 0) {
+    if (ownerCheck.rows.length === 0) {
       return res.status(404).json({ message: 'Instância não encontrada' });
     }
+
+    const isOwner = ownerCheck.rows[0].user_id === req.user.userId;
+    const isAdmin = await isUserAdmin(req.user.userId);
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Sem permissão para deletar esta instância' });
+    }
+
+    await db.query('DELETE FROM instances WHERE id = $1', [id]);
 
     res.status(204).send();
   } catch (error) {
@@ -131,9 +190,9 @@ router.post('/:id/check-status', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Get instance details
+    // Get instance details (allow checking global instances)
     const instanceResult = await db.query(
-      'SELECT * FROM instances WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM instances WHERE id = $1 AND (user_id = $2 OR is_global = TRUE)',
       [id, req.user.userId]
     );
 

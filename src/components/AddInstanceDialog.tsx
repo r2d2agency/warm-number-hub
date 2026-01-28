@@ -10,7 +10,8 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
-import { Plus, Server } from "lucide-react";
+import { Plus, Server, Globe } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AddInstanceDialogProps {
   open: boolean;
@@ -20,11 +21,15 @@ interface AddInstanceDialogProps {
 }
 
 export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }: AddInstanceDialogProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('superadmin');
+  
   const [name, setName] = useState("");
   const [apiUrl, setApiUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isPrimary, setIsPrimary] = useState(false);
+  const [isGlobal, setIsGlobal] = useState(false);
 
   useEffect(() => {
     if (editingInstance) {
@@ -33,20 +38,25 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
       setApiKey(editingInstance.apiKey);
       setPhoneNumber(editingInstance.phoneNumber || "");
       setIsPrimary(editingInstance.isPrimary || false);
+      setIsGlobal(editingInstance.isGlobal || false);
     } else {
       setName("");
       setApiUrl("");
       setApiKey("");
       setPhoneNumber("");
       setIsPrimary(false);
+      setIsGlobal(false);
     }
   }, [editingInstance, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, apiUrl, apiKey, phoneNumber, isPrimary });
+    onAdd({ name, apiUrl, apiKey, phoneNumber, isPrimary, isGlobal: isAdmin ? isGlobal : false });
     onOpenChange(false);
   };
+
+  // Check if editing a global instance that user doesn't own
+  const isReadOnly = editingInstance?.isGlobal && !editingInstance?.isOwner && !isAdmin;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,6 +80,7 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
               placeholder="Ex: Instância A"
               className="bg-secondary border-border/50 focus:border-primary"
               required
+              disabled={isReadOnly}
             />
           </div>
 
@@ -84,6 +95,7 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
               placeholder="https://api.evolution.com"
               className="bg-secondary border-border/50 focus:border-primary"
               required
+              disabled={isReadOnly}
             />
           </div>
 
@@ -99,6 +111,7 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
               placeholder="Sua chave de API"
               className="bg-secondary border-border/50 focus:border-primary"
               required
+              disabled={isReadOnly}
             />
           </div>
 
@@ -112,6 +125,7 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="5511999999999"
               className="bg-secondary border-border/50 focus:border-primary"
+              disabled={isReadOnly}
             />
           </div>
 
@@ -120,11 +134,28 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
               id="isPrimary"
               checked={isPrimary}
               onCheckedChange={(checked) => setIsPrimary(checked === true)}
+              disabled={isReadOnly}
             />
             <Label htmlFor="isPrimary" className="text-sm text-muted-foreground cursor-pointer">
               Definir como instância principal (número de aquecimento)
             </Label>
           </div>
+
+          {isAdmin && (
+            <div className="flex items-center space-x-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <Checkbox
+                id="isGlobal"
+                checked={isGlobal}
+                onCheckedChange={(checked) => setIsGlobal(checked === true)}
+              />
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-primary" />
+                <Label htmlFor="isGlobal" className="text-sm text-foreground cursor-pointer">
+                  Instância Global (visível para todos os usuários)
+                </Label>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button
@@ -135,10 +166,12 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
             >
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
-              {editingInstance ? "Salvar" : "Adicionar"}
-            </Button>
+            {!isReadOnly && (
+              <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-2" />
+                {editingInstance ? "Salvar" : "Adicionar"}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
