@@ -106,6 +106,9 @@ async function sendEvolutionMessage(instance, toNumber, message) {
   try {
     const url = `${instance.api_url}/message/sendText/${instance.name}`;
     
+    console.log(`[Evolution] Sending to ${url}`);
+    console.log(`[Evolution] From: ${instance.name}, To: ${toNumber}`);
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -118,16 +121,25 @@ async function sendEvolutionMessage(instance, toNumber, message) {
       })
     });
 
+    const responseText = await response.text();
+    console.log(`[Evolution] Response status: ${response.status}`);
+    console.log(`[Evolution] Response body: ${responseText.substring(0, 500)}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Evolution API error: ${response.status} - ${errorText}`);
-      return { success: false, error: errorText };
+      console.error(`[Evolution] API error: ${response.status} - ${responseText}`);
+      return { success: false, error: `HTTP ${response.status}: ${responseText}` };
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      data = { raw: responseText };
+    }
+    
     return { success: true, data };
   } catch (error) {
-    console.error('Error sending Evolution message:', error);
+    console.error('[Evolution] Error sending message:', error);
     return { success: false, error: error.message };
   }
 }
@@ -149,9 +161,8 @@ async function updateInstanceStats(instanceId, type) {
  * Log warming activity
  */
 async function logWarmingActivity(userId, action, details) {
-  console.log(`[Warming][User:${userId}] ${action}:`, details);
+  console.log(`[Warming][User:${userId}] ${action}:`, JSON.stringify(details));
   
-  // Optionally store in database for audit
   try {
     await db.query(
       `INSERT INTO warming_logs (user_id, action, details, created_at)
@@ -181,14 +192,34 @@ async function executeWarmingCycle(userId) {
     
     // Check if within active hours
     if (!isWithinActiveHours(config.active_hours_start, config.active_hours_end)) {
-      console.log(`[Warming][User:${userId}] Outside active hours (${config.active_hours_start}h-${config.active_hours_end}h)`);
+      const msg = `Outside active hours (${config.active_hours_start}h-${config.active_hours_end}h), current: ${new Date().getHours()}h`;
+      console.log(`[Warming][User:${userId}] ${msg}`);
+      await logWarmingActivity(userId, 'SKIPPED', { reason: msg });
       scheduleNextCycle(userId, 60000); // Check again in 1 minute
       return;
     }
 
     const primaryInstance = await getPrimaryInstance(userId);
     if (!primaryInstance) {
-      console.log(`[Warming][User:${userId}] No primary instance configured`);
+      const msg = 'No primary instance configured';
+      console.log(`[Warming][User:${userId}] ${msg}`);
+      await logWarmingActivity(userId, 'ERROR', { reason: msg });
+      return;
+    }
+
+    if (primaryInstance.status !== 'connected') {
+      const msg = `Primary instance not connected (status: ${primaryInstance.status})`;
+      console.log(`[Warming][User:${userId}] ${msg}`);
+      await logWarmingActivity(userId, 'ERROR', { reason: msg });
+      scheduleNextCycle(userId, 30000);
+      return;
+    }
+
+    if (!primaryInstance.phone_number) {
+      const msg = 'Primary instance has no phone number';
+      console.log(`[Warming][User:${userId}] ${msg}`);
+      await logWarmingActivity(userId, 'ERROR', { reason: msg });
+      scheduleNextCycle(userId, 30000);
       return;
     }
 
@@ -196,65 +227,119 @@ async function executeWarmingCycle(userId) {
     const message = await getRandomMessage(userId);
     
     if (!message) {
-      console.log(`[Warming][User:${userId}] No messages configured`);
+      const msg = 'No messages configured';
+      console.log(`[Warming][User:${userId}] ${msg}`);
+      await logWarmingActivity(userId, 'ERROR', { reason: msg });
       scheduleNextCycle(userId, getRandomDelay(config.min_delay_seconds, config.max_delay_seconds));
       return;
     }
 
     // Decide action based on random factor
-    const action = Math.random();
+    const actionRoll = Math.random();
+    let actionTaken = 'NONE';
+    let actionResult = null;
     
-    if (action < 0.4 && secondaryInstances.length > 0) {
+    console.log(`[Warming][User:${userId}] Action roll: ${actionRoll.toFixed(2)}, Secondary instances: ${secondaryInstances.length}`);
+    
+    if (actionRoll < 0.4 && secondaryInstances.length > 0) {
       // 40% chance: Secondary instance sends to primary
+      actionTaken = 'SECONDARY_TO_PRIMARY';
       const secondaryInstance = secondaryInstances[Math.floor(Math.random() * secondaryInstances.length)];
       const targetNumber = primaryInstance.phone_number;
       
+      console.log(`[Warming][User:${userId}] Trying ${actionTaken}: ${secondaryInstance.name} -> ${primaryInstance.name}`);
+      
       if (targetNumber) {
         const result = await sendEvolutionMessage(secondaryInstance, targetNumber, message);
+        actionResult = result;
         
         if (result.success) {
           await updateInstanceStats(secondaryInstance.id, 'sent');
           await updateInstanceStats(primaryInstance.id, 'received');
-          await logWarmingActivity(userId, 'SECONDARY_TO_PRIMARY', {
+          await logWarmingActivity(userId, actionTaken, {
             from: secondaryInstance.name,
             to: primaryInstance.name,
-            message: message.substring(0, 50)
+            message: message.substring(0, 50),
+            success: true
+          });
+        } else {
+          await logWarmingActivity(userId, 'ERROR', {
+            action: actionTaken,
+            from: secondaryInstance.name,
+            to: primaryInstance.name,
+            error: result.error
           });
         }
       }
-    } else if (action < 0.7 && secondaryInstances.length > 0) {
+    } else if (actionRoll < 0.7 && secondaryInstances.length > 0) {
       // 30% chance: Primary responds to a secondary instance
+      actionTaken = 'PRIMARY_TO_SECONDARY';
       const secondaryInstance = secondaryInstances[Math.floor(Math.random() * secondaryInstances.length)];
       const targetNumber = secondaryInstance.phone_number;
       
+      console.log(`[Warming][User:${userId}] Trying ${actionTaken}: ${primaryInstance.name} -> ${secondaryInstance.name}`);
+      
       if (targetNumber) {
         const result = await sendEvolutionMessage(primaryInstance, targetNumber, message);
+        actionResult = result;
         
         if (result.success) {
           await updateInstanceStats(primaryInstance.id, 'sent');
           await updateInstanceStats(secondaryInstance.id, 'received');
-          await logWarmingActivity(userId, 'PRIMARY_TO_SECONDARY', {
+          await logWarmingActivity(userId, actionTaken, {
             from: primaryInstance.name,
             to: secondaryInstance.name,
-            message: message.substring(0, 50)
+            message: message.substring(0, 50),
+            success: true
+          });
+        } else {
+          await logWarmingActivity(userId, 'ERROR', {
+            action: actionTaken,
+            from: primaryInstance.name,
+            to: secondaryInstance.name,
+            error: result.error
           });
         }
+      } else {
+        await logWarmingActivity(userId, 'ERROR', {
+          action: actionTaken,
+          reason: `Secondary instance ${secondaryInstance.name} has no phone number`
+        });
       }
     } else {
-      // 30% chance: Primary sends to a client number
+      // 30% chance (or fallback): Primary sends to a client number
+      actionTaken = 'PRIMARY_TO_CLIENT';
       const clientNumber = await getRandomClientNumber(userId);
       
       if (clientNumber) {
+        console.log(`[Warming][User:${userId}] Trying ${actionTaken}: ${primaryInstance.name} -> ${clientNumber.phone_number}`);
+        
         const result = await sendEvolutionMessage(primaryInstance, clientNumber.phone_number, message);
+        actionResult = result;
         
         if (result.success) {
           await updateInstanceStats(primaryInstance.id, 'sent');
-          await logWarmingActivity(userId, 'PRIMARY_TO_CLIENT', {
+          await logWarmingActivity(userId, actionTaken, {
             from: primaryInstance.name,
             to: clientNumber.name || clientNumber.phone_number,
-            message: message.substring(0, 50)
+            message: message.substring(0, 50),
+            success: true
+          });
+        } else {
+          await logWarmingActivity(userId, 'ERROR', {
+            action: actionTaken,
+            from: primaryInstance.name,
+            to: clientNumber.phone_number,
+            error: result.error
           });
         }
+      } else {
+        const msg = 'No client numbers configured';
+        console.log(`[Warming][User:${userId}] ${msg}`);
+        await logWarmingActivity(userId, 'SKIPPED', { 
+          action: actionTaken, 
+          reason: msg 
+        });
       }
     }
 
@@ -264,6 +349,10 @@ async function executeWarmingCycle(userId) {
     
   } catch (error) {
     console.error(`[Warming][User:${userId}] Cycle error:`, error);
+    await logWarmingActivity(userId, 'ERROR', { 
+      reason: 'Cycle execution failed', 
+      error: error.message 
+    });
     // Retry after a delay
     scheduleNextCycle(userId, 30000);
   }
@@ -296,6 +385,10 @@ async function startWarming(userId) {
     return { success: false, error: 'Nenhuma instância principal configurada' };
   }
 
+  if (!primaryInstance.phone_number) {
+    return { success: false, error: 'A instância principal não tem número de telefone configurado' };
+  }
+
   const messages = await db.query(
     'SELECT COUNT(*) as count FROM messages WHERE user_id = $1',
     [userId]
@@ -316,6 +409,10 @@ async function startWarming(userId) {
   activeWarmingSessions.set(userId, session);
   
   console.log(`[Warming][User:${userId}] Started warming session`);
+  await logWarmingActivity(userId, 'STARTED', { 
+    primaryInstance: primaryInstance.name,
+    primaryPhone: primaryInstance.phone_number
+  });
   
   // Start first cycle immediately
   executeWarmingCycle(userId);
@@ -338,6 +435,7 @@ async function stopWarming(userId) {
     
     activeWarmingSessions.delete(userId);
     console.log(`[Warming][User:${userId}] Stopped warming session`);
+    await logWarmingActivity(userId, 'STOPPED', {});
   }
   
   return { success: true, message: 'Aquecimento pausado' };

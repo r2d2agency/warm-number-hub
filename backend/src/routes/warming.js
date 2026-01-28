@@ -150,4 +150,218 @@ router.get('/logs', async (req, res) => {
   }
 });
 
+// ========== NEW: Diagnostics Endpoints ==========
+
+// Get warming diagnostics
+router.get('/diagnostics', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Get configuration
+    const configResult = await db.query(
+      'SELECT * FROM warming_config WHERE user_id = $1',
+      [userId]
+    );
+    const config = configResult.rows[0] || null;
+    
+    // Get primary instance
+    const primaryResult = await db.query(
+      'SELECT id, name, phone_number, status, api_url, messages_sent, messages_received FROM instances WHERE user_id = $1 AND is_primary = TRUE',
+      [userId]
+    );
+    const primaryInstance = primaryResult.rows[0] || null;
+    
+    // Get secondary instances count
+    const secondaryResult = await db.query(
+      `SELECT COUNT(*) as total, 
+              COUNT(*) FILTER (WHERE status = 'connected') as connected
+       FROM instances WHERE user_id = $1 AND is_primary = FALSE`,
+      [userId]
+    );
+    const secondaryStats = secondaryResult.rows[0];
+    
+    // Get messages count
+    const messagesResult = await db.query(
+      'SELECT COUNT(*) as count FROM messages WHERE user_id = $1',
+      [userId]
+    );
+    const messagesCount = parseInt(messagesResult.rows[0].count);
+    
+    // Get client numbers count
+    const clientsResult = await db.query(
+      'SELECT COUNT(*) as count FROM client_numbers WHERE user_id = $1',
+      [userId]
+    );
+    const clientsCount = parseInt(clientsResult.rows[0].count);
+    
+    // Get logs stats (last 24h)
+    let logsStats = { total: 0, byAction: {} };
+    try {
+      const logsResult = await db.query(
+        `SELECT action, COUNT(*) as count 
+         FROM warming_logs 
+         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+         GROUP BY action`,
+        [userId]
+      );
+      logsStats.byAction = logsResult.rows.reduce((acc, row) => {
+        acc[row.action] = parseInt(row.count);
+        return acc;
+      }, {});
+      logsStats.total = logsResult.rows.reduce((sum, row) => sum + parseInt(row.count), 0);
+    } catch (e) {
+      // Table might not exist
+    }
+    
+    // Get hourly stats (last 24h)
+    let hourlyStats = [];
+    try {
+      const hourlyResult = await db.query(
+        `SELECT 
+           DATE_TRUNC('hour', created_at) as hour,
+           COUNT(*) as count,
+           COUNT(*) FILTER (WHERE action = 'SECONDARY_TO_PRIMARY') as secondary_to_primary,
+           COUNT(*) FILTER (WHERE action = 'PRIMARY_TO_SECONDARY') as primary_to_secondary,
+           COUNT(*) FILTER (WHERE action = 'PRIMARY_TO_CLIENT') as primary_to_client,
+           COUNT(*) FILTER (WHERE action = 'ERROR') as errors
+         FROM warming_logs 
+         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+         GROUP BY DATE_TRUNC('hour', created_at)
+         ORDER BY hour DESC
+         LIMIT 24`,
+        [userId]
+      );
+      hourlyStats = hourlyResult.rows.map(row => ({
+        hour: row.hour,
+        count: parseInt(row.count),
+        secondaryToPrimary: parseInt(row.secondary_to_primary),
+        primaryToSecondary: parseInt(row.primary_to_secondary),
+        primaryToClient: parseInt(row.primary_to_client),
+        errors: parseInt(row.errors)
+      }));
+    } catch (e) {
+      // Table might not exist
+    }
+    
+    // Get recent errors
+    let recentErrors = [];
+    try {
+      const errorsResult = await db.query(
+        `SELECT id, action, details, created_at 
+         FROM warming_logs 
+         WHERE user_id = $1 AND action = 'ERROR'
+         ORDER BY created_at DESC
+         LIMIT 10`,
+        [userId]
+      );
+      recentErrors = errorsResult.rows.map(row => ({
+        id: row.id,
+        details: row.details,
+        createdAt: row.created_at
+      }));
+    } catch (e) {
+      // Table might not exist
+    }
+    
+    // Build diagnostics
+    const diagnostics = {
+      status: warmingService.getWarmingStatus(userId),
+      config: config ? {
+        minDelaySeconds: config.min_delay_seconds,
+        maxDelaySeconds: config.max_delay_seconds,
+        messagesPerHour: config.messages_per_hour,
+        activeHoursStart: config.active_hours_start,
+        activeHoursEnd: config.active_hours_end
+      } : null,
+      requirements: {
+        hasPrimaryInstance: !!primaryInstance,
+        primaryInstanceConnected: primaryInstance?.status === 'connected',
+        primaryHasPhoneNumber: !!primaryInstance?.phone_number,
+        hasSecondaryInstances: parseInt(secondaryStats.total) > 0,
+        secondaryConnectedCount: parseInt(secondaryStats.connected),
+        hasMessages: messagesCount > 0,
+        messagesCount,
+        hasClientNumbers: clientsCount > 0,
+        clientNumbersCount: clientsCount
+      },
+      primaryInstance: primaryInstance ? {
+        id: primaryInstance.id,
+        name: primaryInstance.name,
+        phoneNumber: primaryInstance.phone_number,
+        status: primaryInstance.status,
+        apiUrl: primaryInstance.api_url,
+        messagesSent: primaryInstance.messages_sent || 0,
+        messagesReceived: primaryInstance.messages_received || 0
+      } : null,
+      stats: {
+        last24h: logsStats,
+        hourly: hourlyStats.reverse()
+      },
+      recentErrors
+    };
+    
+    res.json(diagnostics);
+  } catch (error) {
+    console.error('Get diagnostics error:', error);
+    res.status(500).json({ message: 'Erro ao buscar diagnósticos' });
+  }
+});
+
+// Test Evolution API connection
+router.post('/test-connection/:instanceId', async (req, res) => {
+  try {
+    const { instanceId } = req.params;
+    
+    const instanceResult = await db.query(
+      'SELECT * FROM instances WHERE id = $1 AND user_id = $2',
+      [instanceId, req.user.userId]
+    );
+    
+    if (instanceResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Instância não encontrada' });
+    }
+    
+    const instance = instanceResult.rows[0];
+    
+    // Test connection to Evolution API
+    const testUrl = `${instance.api_url}/instance/connectionState/${instance.name}`;
+    
+    const startTime = Date.now();
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': instance.api_key,
+        'Content-Type': 'application/json'
+      }
+    });
+    const latency = Date.now() - startTime;
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.json({
+        success: false,
+        status: response.status,
+        error: errorText,
+        latency
+      });
+    }
+    
+    const data = await response.json();
+    
+    res.json({
+      success: true,
+      status: response.status,
+      state: data.instance?.state || data.state || 'unknown',
+      latency,
+      rawResponse: data
+    });
+  } catch (error) {
+    console.error('Test connection error:', error);
+    res.json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

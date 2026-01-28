@@ -9,6 +9,7 @@ import { ConfigPanel } from "@/components/ConfigPanel";
 import { ClientNumbersList } from "@/components/ClientNumbersList";
 import { FlowVisualization } from "@/components/FlowVisualization";
 import { WarmingLogsPanel } from "@/components/WarmingLogsPanel";
+import { WarmingDiagnosticsPanel } from "@/components/WarmingDiagnosticsPanel";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -376,8 +377,9 @@ export default function Index() {
             />
           </div>
 
-          {/* Fourth Column - Warming Logs */}
+          {/* Fourth Column - Diagnostics & Logs */}
           <div className="space-y-4 md:space-y-6">
+            <WarmingDiagnosticsPanel />
             <WarmingLogsPanel isWarming={isWarming} />
           </div>
         </div>
