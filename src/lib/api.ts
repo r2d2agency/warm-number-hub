@@ -291,6 +291,8 @@ interface Instance {
   status: 'connected' | 'disconnected' | 'warming';
   phoneNumber?: string;
   isPrimary?: boolean;
+  isGlobal?: boolean;
+  isOwner?: boolean;
   messagesSent?: number;
   messagesReceived?: number;
   lastActivity?: Date;
