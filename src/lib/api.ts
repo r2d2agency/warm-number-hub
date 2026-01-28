@@ -138,6 +138,12 @@ export const api = {
   getWarmingLogs: (limit = 50) =>
     request<WarmingLog[]>(`/warming-number/logs?limit=${limit}`),
 
+  getWarmingDiagnostics: () =>
+    request<WarmingDiagnostics>('/warming-number/diagnostics'),
+
+  testInstanceConnection: (instanceId: string) =>
+    request<ConnectionTestResult>(`/warming-number/test-connection/${instanceId}`, { method: 'POST' }),
+
   // Messages
   getMessages: () =>
     request<Message[]>('/messages'),
@@ -340,8 +346,82 @@ interface WarmingLog {
     from?: string;
     to?: string;
     message?: string;
+    error?: string;
+    reason?: string;
+    success?: boolean;
   };
   createdAt: string;
+}
+
+interface WarmingDiagnostics {
+  status: {
+    isActive: boolean;
+    startedAt: string | null;
+    nextCycleAt: string | null;
+  };
+  config: {
+    minDelaySeconds: number;
+    maxDelaySeconds: number;
+    messagesPerHour: number;
+    activeHoursStart: number;
+    activeHoursEnd: number;
+  } | null;
+  requirements: {
+    hasPrimaryInstance: boolean;
+    primaryInstanceConnected: boolean;
+    primaryHasPhoneNumber: boolean;
+    hasSecondaryInstances: boolean;
+    secondaryConnectedCount: number;
+    hasMessages: boolean;
+    messagesCount: number;
+    hasClientNumbers: boolean;
+    clientNumbersCount: number;
+  };
+  primaryInstance: {
+    id: string;
+    name: string;
+    phoneNumber: string;
+    status: string;
+    apiUrl: string;
+    messagesSent: number;
+    messagesReceived: number;
+  } | null;
+  stats: {
+    last24h: {
+      total: number;
+      byAction: Record<string, number>;
+    };
+    hourly: Array<{
+      hour: string;
+      count: number;
+      secondaryToPrimary: number;
+      primaryToSecondary: number;
+      primaryToClient: number;
+      errors: number;
+    }>;
+  };
+  recentErrors: Array<{
+    id: string;
+    details: Record<string, unknown>;
+    createdAt: string;
+  }>;
+}
+
+interface ConnectionTestResult {
+  success: boolean;
+  status?: number;
+  state?: string;
+  error?: string;
+  latency?: number;
+  rawResponse?: unknown;
+}
+
+export interface Branding {
+  id?: string;
+  logoUrl?: string | null;
+  appName: string;
+  appSubtitle: string;
+  primaryColor: string;
 }
 
 export interface Branding {
