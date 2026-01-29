@@ -47,6 +47,10 @@ export function Header() {
                 src={logoSrc ?? ''} 
                 alt={branding.appName} 
                 className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl object-contain"
+                onError={() => {
+                  // If /uploads is not reachable or file is missing, fallback gracefully.
+                  setBranding((prev) => ({ ...prev, logoUrl: null }));
+                }}
               />
             ) : (
               <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-primary/20 flex items-center justify-center glow-effect">
