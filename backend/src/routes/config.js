@@ -11,6 +11,7 @@ function formatConfig(row) {
     messagesPerHour: row.messages_per_hour,
     activeHoursStart: row.active_hours_start,
     activeHoursEnd: row.active_hours_end,
+    receiveRatio: parseFloat(row.receive_ratio) || 2.0,
   };
 }
 
@@ -25,8 +26,8 @@ router.get('/', async (req, res) => {
     if (result.rows.length === 0) {
       // Create default config
       const newConfig = await db.query(
-        `INSERT INTO warming_config (user_id, min_delay_seconds, max_delay_seconds, messages_per_hour, active_hours_start, active_hours_end)
-         VALUES ($1, 60, 180, 20, 8, 22)
+        `INSERT INTO warming_config (user_id, min_delay_seconds, max_delay_seconds, messages_per_hour, active_hours_start, active_hours_end, receive_ratio)
+         VALUES ($1, 60, 180, 20, 8, 22, 2.0)
          RETURNING *`,
         [req.user.userId]
       );
@@ -43,7 +44,7 @@ router.get('/', async (req, res) => {
 // Update config
 router.put('/', async (req, res) => {
   try {
-    const { minDelaySeconds, maxDelaySeconds, messagesPerHour, activeHoursStart, activeHoursEnd } = req.body;
+    const { minDelaySeconds, maxDelaySeconds, messagesPerHour, activeHoursStart, activeHoursEnd, receiveRatio } = req.body;
 
     const result = await db.query(
       `UPDATE warming_config 
@@ -52,10 +53,11 @@ router.put('/', async (req, res) => {
            messages_per_hour = COALESCE($3, messages_per_hour),
            active_hours_start = COALESCE($4, active_hours_start),
            active_hours_end = COALESCE($5, active_hours_end),
+           receive_ratio = COALESCE($6, receive_ratio),
            updated_at = NOW()
-       WHERE user_id = $6
+       WHERE user_id = $7
        RETURNING *`,
-      [minDelaySeconds, maxDelaySeconds, messagesPerHour, activeHoursStart, activeHoursEnd, req.user.userId]
+      [minDelaySeconds, maxDelaySeconds, messagesPerHour, activeHoursStart, activeHoursEnd, receiveRatio, req.user.userId]
     );
 
     if (result.rows.length === 0) {
