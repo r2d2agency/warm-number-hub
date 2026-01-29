@@ -235,14 +235,16 @@ async function executeWarmingCycle(userId) {
     }
 
     // Decide action based on random factor
+    // Regra de negócio: Primária recebe 2x mais do que envia
+    // Distribuição: 66% recebe (secundária→primária), 17% envia p/ secundária, 17% envia p/ cliente
     const actionRoll = Math.random();
     let actionTaken = 'NONE';
     let actionResult = null;
     
     console.log(`[Warming][User:${userId}] Action roll: ${actionRoll.toFixed(2)}, Secondary instances: ${secondaryInstances.length}`);
     
-    if (actionRoll < 0.4 && secondaryInstances.length > 0) {
-      // 40% chance: Secondary instance sends to primary
+    if (actionRoll < 0.66 && secondaryInstances.length > 0) {
+      // 66% chance: Secondary instance sends to primary (PRIMARY RECEIVES)
       actionTaken = 'SECONDARY_TO_PRIMARY';
       const secondaryInstance = secondaryInstances[Math.floor(Math.random() * secondaryInstances.length)];
       const targetNumber = primaryInstance.phone_number;
@@ -271,8 +273,8 @@ async function executeWarmingCycle(userId) {
           });
         }
       }
-    } else if (actionRoll < 0.7 && secondaryInstances.length > 0) {
-      // 30% chance: Primary responds to a secondary instance
+    } else if (actionRoll < 0.83 && secondaryInstances.length > 0) {
+      // 17% chance: Primary responds to a secondary instance (PRIMARY SENDS)
       actionTaken = 'PRIMARY_TO_SECONDARY';
       const secondaryInstance = secondaryInstances[Math.floor(Math.random() * secondaryInstances.length)];
       const targetNumber = secondaryInstance.phone_number;
@@ -307,7 +309,7 @@ async function executeWarmingCycle(userId) {
         });
       }
     } else {
-      // 30% chance (or fallback): Primary sends to a client number
+      // 17% chance (or fallback): Primary sends to a client number (PRIMARY SENDS)
       actionTaken = 'PRIMARY_TO_CLIENT';
       const clientNumber = await getRandomClientNumber(userId);
       
