@@ -1,9 +1,10 @@
 import { WarmingConfig } from "@/types/warming";
-import { Settings, Clock, Zap, Play, Pause, Loader2 } from "lucide-react";
+import { Settings, Clock, Zap, Play, Pause, Loader2, ArrowDownLeft } from "lucide-react";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface ConfigPanelProps {
   config: WarmingConfig;
@@ -108,6 +109,34 @@ export function ConfigPanel({ config, onConfigChange, isWarming = false, onToggl
             step={5}
             className="[&_[role=slider]]:bg-primary"
           />
+        </div>
+
+        <div className="space-y-2 md:space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs md:text-sm text-muted-foreground flex items-center gap-2">
+              <ArrowDownLeft className="w-3 h-3 md:w-4 md:h-4" />
+              Proporção Recebe/Envia
+            </Label>
+            <span className="text-xs md:text-sm font-medium text-foreground">{config.receiveRatio}:1</span>
+          </div>
+          <Select
+            value={String(config.receiveRatio)}
+            onValueChange={(value) => onConfigChange({ ...config, receiveRatio: parseFloat(value) })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Selecione a proporção" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1.5">1.5:1 (Recebe 50% mais)</SelectItem>
+              <SelectItem value="2">2:1 (Recebe 2x mais)</SelectItem>
+              <SelectItem value="2.5">2.5:1 (Recebe 2.5x mais)</SelectItem>
+              <SelectItem value="3">3:1 (Recebe 3x mais)</SelectItem>
+              <SelectItem value="4">4:1 (Recebe 4x mais)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[10px] text-muted-foreground">
+            Define quantas mensagens o número aquecido recebe para cada uma que envia.
+          </p>
         </div>
 
         <div className="pt-3 md:pt-4 border-t border-border/50">

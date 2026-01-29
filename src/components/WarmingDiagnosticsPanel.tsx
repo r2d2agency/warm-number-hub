@@ -47,6 +47,7 @@ interface WarmingDiagnostics {
     messagesPerHour: number;
     activeHoursStart: number;
     activeHoursEnd: number;
+    receiveRatio?: number;
   } | null;
   requirements: {
     hasPrimaryInstance: boolean;
@@ -334,7 +335,7 @@ export function WarmingDiagnosticsPanel() {
               Proporção Recebidas vs Enviadas
             </CardTitle>
             <CardDescription className="text-xs">
-              Meta: 2:1 (receber 2x mais do que envia)
+              Meta: {diagnostics.config?.receiveRatio || 2}:1 (receber {diagnostics.config?.receiveRatio || 2}x mais do que envia)
             </CardDescription>
           </CardHeader>
           <CardContent className="py-2">
@@ -345,7 +346,8 @@ export function WarmingDiagnosticsPanel() {
               const ratio = sent > 0 ? (received / sent).toFixed(2) : '∞';
               const receivedPct = total > 0 ? (received / total) * 100 : 50;
               const sentPct = total > 0 ? (sent / total) * 100 : 50;
-              const isHealthy = sent === 0 || received / sent >= 1.8;
+              const targetRatio = diagnostics.config?.receiveRatio || 2;
+              const isHealthy = sent === 0 || received / sent >= (targetRatio * 0.9); // 90% da meta é saudável
               
               return (
                 <div className="space-y-3">
@@ -406,7 +408,7 @@ export function WarmingDiagnosticsPanel() {
                     {isHealthy ? (
                       <span className="ml-2">✓ Saudável</span>
                     ) : (
-                      <span className="ml-2">⚠ Abaixo da meta (2:1)</span>
+                      <span className="ml-2">⚠ Abaixo da meta ({targetRatio}:1)</span>
                     )}
                   </div>
                 </div>

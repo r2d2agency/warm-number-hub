@@ -337,6 +337,7 @@ interface WarmingConfig {
   messagesPerHour: number;
   activeHoursStart: number;
   activeHoursEnd: number;
+  receiveRatio: number;
 }
 
 interface WarmingStatus {

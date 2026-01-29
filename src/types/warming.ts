@@ -34,6 +34,7 @@ export interface WarmingConfig {
   messagesPerHour: number;
   activeHoursStart: number;
   activeHoursEnd: number;
+  receiveRatio: number;
 }
 
 export interface ClientNumber {

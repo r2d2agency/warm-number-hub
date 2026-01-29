@@ -33,6 +33,7 @@ export default function Index() {
     messagesPerHour: 20,
     activeHoursStart: 8,
     activeHoursEnd: 22,
+    receiveRatio: 2.0,
   });
 
   const [isLoading, setIsLoading] = useState(true);

@@ -271,7 +271,8 @@ router.get('/diagnostics', async (req, res) => {
         maxDelaySeconds: config.max_delay_seconds,
         messagesPerHour: config.messages_per_hour,
         activeHoursStart: config.active_hours_start,
-        activeHoursEnd: config.active_hours_end
+        activeHoursEnd: config.active_hours_end,
+        receiveRatio: parseFloat(config.receive_ratio) || 2.0
       } : null,
       requirements: {
         hasPrimaryInstance: !!primaryInstance,

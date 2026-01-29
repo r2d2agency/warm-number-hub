@@ -92,7 +92,8 @@ async function getWarmingConfig(userId) {
       max_delay_seconds: 180,
       messages_per_hour: 20,
       active_hours_start: 8,
-      active_hours_end: 22
+      active_hours_end: 22,
+      receive_ratio: 2.0
     };
   }
   
@@ -235,16 +236,24 @@ async function executeWarmingCycle(userId) {
     }
 
     // Decide action based on random factor
-    // Regra de negócio: Primária recebe 2x mais do que envia
-    // Distribuição: 66% recebe (secundária→primária), 17% envia p/ secundária, 17% envia p/ cliente
+    // Regra de negócio: Primária recebe X vezes mais do que envia (configurável)
+    // Calcula proporções baseado no receive_ratio configurado
+    const receiveRatio = parseFloat(config.receive_ratio) || 2.0;
+    // receiveRatio = received / sent
+    // Se ratio = 2, então receive_pct = 2/(2+1) = 66.6%
+    // Se ratio = 3, então receive_pct = 3/(3+1) = 75%
+    const receivePct = receiveRatio / (receiveRatio + 1);
+    const sendPct = 1 - receivePct;
+    const sendToSecondaryPct = sendPct / 2; // metade vai para secundárias
+    
     const actionRoll = Math.random();
     let actionTaken = 'NONE';
     let actionResult = null;
     
-    console.log(`[Warming][User:${userId}] Action roll: ${actionRoll.toFixed(2)}, Secondary instances: ${secondaryInstances.length}`);
+    console.log(`[Warming][User:${userId}] Action roll: ${actionRoll.toFixed(2)}, Ratio: ${receiveRatio}:1, Receive%: ${(receivePct*100).toFixed(0)}%, Secondary instances: ${secondaryInstances.length}`);
     
-    if (actionRoll < 0.66 && secondaryInstances.length > 0) {
-      // 66% chance: Secondary instance sends to primary (PRIMARY RECEIVES)
+    if (actionRoll < receivePct && secondaryInstances.length > 0) {
+      // receivePct chance: Secondary instance sends to primary (PRIMARY RECEIVES)
       actionTaken = 'SECONDARY_TO_PRIMARY';
       const secondaryInstance = secondaryInstances[Math.floor(Math.random() * secondaryInstances.length)];
       const targetNumber = primaryInstance.phone_number;
@@ -273,8 +282,8 @@ async function executeWarmingCycle(userId) {
           });
         }
       }
-    } else if (actionRoll < 0.83 && secondaryInstances.length > 0) {
-      // 17% chance: Primary responds to a secondary instance (PRIMARY SENDS)
+    } else if (actionRoll < (receivePct + sendToSecondaryPct) && secondaryInstances.length > 0) {
+      // sendToSecondaryPct chance: Primary responds to a secondary instance (PRIMARY SENDS)
       actionTaken = 'PRIMARY_TO_SECONDARY';
       const secondaryInstance = secondaryInstances[Math.floor(Math.random() * secondaryInstances.length)];
       const targetNumber = secondaryInstance.phone_number;
@@ -309,7 +318,7 @@ async function executeWarmingCycle(userId) {
         });
       }
     } else {
-      // 17% chance (or fallback): Primary sends to a client number (PRIMARY SENDS)
+      // remaining chance (or fallback): Primary sends to a client number (PRIMARY SENDS)
       actionTaken = 'PRIMARY_TO_CLIENT';
       const clientNumber = await getRandomClientNumber(userId);
       
