@@ -56,6 +56,22 @@ export default function Index() {
         api.getWarmingStatus(),
       ]);
 
+      const errors = [
+        { label: 'Instâncias', error: instancesRes.error },
+        { label: 'Mensagens', error: messagesRes.error },
+        { label: 'Clientes', error: clientsRes.error },
+        { label: 'Config', error: configRes.error },
+        { label: 'Status', error: warmingStatusRes.error },
+      ].filter((e) => !!e.error);
+
+      if (errors.length > 0) {
+        toast.error(
+          `Falha ao carregar: ${errors
+            .map((e) => `${e.label}: ${e.error}`)
+            .join(' | ')}`,
+        );
+      }
+
       if (instancesRes.data) setInstances(instancesRes.data);
       if (messagesRes.data) setMessages(messagesRes.data);
       if (clientsRes.data) setClientNumbers(clientsRes.data);
