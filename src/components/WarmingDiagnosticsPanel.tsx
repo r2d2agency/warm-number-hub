@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { 
   Activity, 
@@ -16,7 +16,9 @@ import {
   Users,
   Clock,
   Zap,
-  TrendingUp
+  TrendingUp,
+  ArrowDownLeft,
+  ArrowUpRight
 } from "lucide-react";
 import { 
   BarChart, 
@@ -319,6 +321,97 @@ export function WarmingDiagnosticsPanel() {
                 {testResult.message}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ratio Chart: Received vs Sent */}
+      {diagnostics.primaryInstance && (
+        <Card className="glass-card">
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Proporção Recebidas vs Enviadas
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Meta: 2:1 (receber 2x mais do que envia)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="py-2">
+            {(() => {
+              const sent = diagnostics.primaryInstance!.messagesSent;
+              const received = diagnostics.primaryInstance!.messagesReceived;
+              const total = sent + received;
+              const ratio = sent > 0 ? (received / sent).toFixed(2) : '∞';
+              const receivedPct = total > 0 ? (received / total) * 100 : 50;
+              const sentPct = total > 0 ? (sent / total) * 100 : 50;
+              const isHealthy = sent === 0 || received / sent >= 1.8;
+              
+              return (
+                <div className="space-y-3">
+                  {/* Ratio indicator */}
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="text-center">
+                      <div className="flex items-center gap-1 text-green-500">
+                        <ArrowDownLeft className="w-4 h-4" />
+                        <span className="text-2xl font-bold">{received}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Recebidas</p>
+                    </div>
+                    <div className="text-xl font-mono text-muted-foreground">:</div>
+                    <div className="text-center">
+                      <div className="flex items-center gap-1 text-blue-500">
+                        <ArrowUpRight className="w-4 h-4" />
+                        <span className="text-2xl font-bold">{sent}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Enviadas</p>
+                    </div>
+                  </div>
+                  
+                  {/* Progress bar visualization */}
+                  <div className="space-y-1">
+                    <div className="flex h-4 rounded-full overflow-hidden bg-secondary">
+                      <div 
+                        className="bg-green-500 flex items-center justify-center text-[9px] font-medium text-white transition-all"
+                        style={{ width: `${receivedPct}%` }}
+                      >
+                        {receivedPct > 15 && `${receivedPct.toFixed(0)}%`}
+                      </div>
+                      <div 
+                        className="bg-blue-500 flex items-center justify-center text-[9px] font-medium text-white transition-all"
+                        style={{ width: `${sentPct}%` }}
+                      >
+                        {sentPct > 15 && `${sentPct.toFixed(0)}%`}
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        Recebidas
+                      </span>
+                      <span className="flex items-center gap-1">
+                        Enviadas
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Status badge */}
+                  <div className={`p-2 rounded text-center text-xs ${
+                    isHealthy 
+                      ? 'bg-green-500/10 text-green-400 border border-green-500/30' 
+                      : 'bg-warning/10 text-warning border border-warning/30'
+                  }`}>
+                    <span className="font-medium">Proporção atual: {ratio}:1</span>
+                    {isHealthy ? (
+                      <span className="ml-2">✓ Saudável</span>
+                    ) : (
+                      <span className="ml-2">⚠ Abaixo da meta (2:1)</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
