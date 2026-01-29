@@ -3,6 +3,26 @@ const db = require('../db');
 
 const router = express.Router();
 
+function mapDbErrorToUserMessage(error, fallback) {
+  const code = error?.code;
+
+  // Postgres common errors
+  if (code === '42703') {
+    return 'Banco desatualizado (coluna ausente). Reinicie o backend para aplicar as migrations.';
+  }
+  if (code === '42P01') {
+    return 'Banco desatualizado (tabela ausente). Verifique se o schema foi criado e reinicie o backend para aplicar as migrations.';
+  }
+  if (code === '28P01') {
+    return 'Falha de autenticação no banco (verifique DATABASE_URL).';
+  }
+  if (code === '3D000') {
+    return 'Database não encontrada (verifique DATABASE_URL).';
+  }
+
+  return fallback;
+}
+
 // Convert snake_case DB row to camelCase for frontend
 function formatInstance(row, currentUserId) {
   return {
@@ -85,7 +105,9 @@ router.post('/', async (req, res) => {
     res.status(201).json(formatInstance(result.rows[0], req.user.userId));
   } catch (error) {
     console.error('Create instance error:', error);
-    res.status(500).json({ message: 'Erro ao criar instância' });
+    res
+      .status(500)
+      .json({ message: mapDbErrorToUserMessage(error, 'Erro ao criar instância') });
   }
 });
 
