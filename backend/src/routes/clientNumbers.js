@@ -69,6 +69,42 @@ router.post('/import', async (req, res) => {
   }
 });
 
+// Update client number
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { phoneNumber, name } = req.body;
+
+    if (!phoneNumber || !phoneNumber.trim()) {
+      return res.status(400).json({ message: 'Número de telefone é obrigatório' });
+    }
+
+    const result = await db.query(
+      `UPDATE client_numbers 
+       SET phone_number = $1, name = $2
+       WHERE id = $3 AND user_id = $4
+       RETURNING *`,
+      [phoneNumber.trim(), name?.trim() || null, id, req.user.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Número não encontrado' });
+    }
+
+    // Format response to camelCase
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      phoneNumber: row.phone_number,
+      name: row.name,
+      createdAt: row.created_at
+    });
+  } catch (error) {
+    console.error('Update client number error:', error);
+    res.status(500).json({ message: 'Erro ao atualizar número' });
+  }
+});
+
 // Delete client number
 router.delete('/:id', async (req, res) => {
   try {

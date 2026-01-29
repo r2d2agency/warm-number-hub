@@ -173,6 +173,12 @@ export const api = {
       body: JSON.stringify({ phoneNumber, name }),
     }),
 
+  updateClientNumber: (id: string, phoneNumber: string, name?: string) =>
+    request<ClientNumber>(`/client-numbers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ phoneNumber, name }),
+    }),
+
   deleteClientNumber: (id: string) =>
     request<void>(`/client-numbers/${id}`, { method: 'DELETE' }),
 
