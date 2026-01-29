@@ -204,6 +204,18 @@ export default function Index() {
     setClientNumbers(clientNumbers.filter(c => c.id !== id));
   };
 
+  const handleUpdateClientNumber = async (id: string, phoneNumber: string, name?: string) => {
+    const { data, error } = await api.updateClientNumber(id, phoneNumber, name);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (data) {
+      setClientNumbers(clientNumbers.map(c => c.id === id ? data : c));
+      toast.success('Número atualizado');
+    }
+  };
+
   const handleImportClientNumbers = async (numbers: { phoneNumber: string; name?: string }[]) => {
     const { data, error } = await api.importClientNumbers(numbers);
     if (error) {
@@ -388,6 +400,7 @@ export default function Index() {
             <ClientNumbersList
               numbers={clientNumbers}
               onAddNumber={handleAddClientNumber}
+              onUpdateNumber={handleUpdateClientNumber}
               onDeleteNumber={handleDeleteClientNumber}
               onImportNumbers={handleImportClientNumbers}
             />

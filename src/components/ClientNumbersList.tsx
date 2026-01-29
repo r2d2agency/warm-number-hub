@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ClientNumber } from "@/types/warming";
-import { Users, Plus, Trash2, Upload } from "lucide-react";
+import { Users, Plus, Trash2, Upload, Pencil, Check, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
@@ -8,19 +8,42 @@ import { ScrollArea } from "./ui/scroll-area";
 interface ClientNumbersListProps {
   numbers: ClientNumber[];
   onAddNumber: (phoneNumber: string, name?: string) => void;
+  onUpdateNumber: (id: string, phoneNumber: string, name?: string) => void;
   onDeleteNumber: (id: string) => void;
   onImportNumbers: (numbers: { phoneNumber: string; name?: string }[]) => void;
 }
 
-export function ClientNumbersList({ numbers, onAddNumber, onDeleteNumber, onImportNumbers }: ClientNumbersListProps) {
+export function ClientNumbersList({ numbers, onAddNumber, onUpdateNumber, onDeleteNumber, onImportNumbers }: ClientNumbersListProps) {
   const [newNumber, setNewNumber] = useState("");
   const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editNumber, setEditNumber] = useState("");
+  const [editName, setEditName] = useState("");
 
   const handleAdd = () => {
     if (newNumber.trim()) {
       onAddNumber(newNumber.trim(), newName.trim() || undefined);
       setNewNumber("");
       setNewName("");
+    }
+  };
+
+  const handleStartEdit = (client: ClientNumber) => {
+    setEditingId(client.id);
+    setEditNumber(client.phoneNumber);
+    setEditName(client.name || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditNumber("");
+    setEditName("");
+  };
+
+  const handleSaveEdit = () => {
+    if (editingId && editNumber.trim()) {
+      onUpdateNumber(editingId, editNumber.trim(), editName.trim() || undefined);
+      handleCancelEdit();
     }
   };
 
@@ -91,27 +114,74 @@ export function ClientNumbersList({ numbers, onAddNumber, onDeleteNumber, onImpo
               key={client.id}
               className="group flex items-center justify-between bg-secondary/30 rounded-lg px-2 md:px-3 py-2 hover:bg-secondary/50 transition-colors"
             >
-              <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
-                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-[10px] md:text-xs text-primary font-medium">
-                    {client.name ? client.name.charAt(0).toUpperCase() : '#'}
-                  </span>
+              {editingId === client.id ? (
+                // Edit mode
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Input
+                    value={editNumber}
+                    onChange={(e) => setEditNumber(e.target.value)}
+                    className="h-7 text-xs bg-background"
+                    placeholder="Número"
+                  />
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="h-7 text-xs bg-background w-20"
+                    placeholder="Nome"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleSaveEdit}
+                    className="h-7 w-7 text-primary hover:text-primary"
+                  >
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCancelEdit}
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
                 </div>
-                <div className="overflow-hidden">
-                  <p className="text-xs md:text-sm text-foreground truncate">{client.phoneNumber}</p>
-                  {client.name && (
-                    <p className="text-[10px] md:text-xs text-muted-foreground truncate">{client.name}</p>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDeleteNumber(client.id)}
-                className="opacity-100 md:opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 h-8 w-8"
-              >
-                <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-              </Button>
+              ) : (
+                // View mode
+                <>
+                  <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+                    <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-[10px] md:text-xs text-primary font-medium">
+                        {client.name ? client.name.charAt(0).toUpperCase() : '#'}
+                      </span>
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-xs md:text-sm text-foreground truncate">{client.phoneNumber}</p>
+                      {client.name && (
+                        <p className="text-[10px] md:text-xs text-muted-foreground truncate">{client.name}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleStartEdit(client)}
+                      className="opacity-100 md:opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary shrink-0 h-8 w-8"
+                    >
+                      <Pencil className="w-3 h-3 md:w-4 md:h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDeleteNumber(client.id)}
+                      className="opacity-100 md:opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0 h-8 w-8"
+                    >
+                      <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
           {numbers.length === 0 && (
