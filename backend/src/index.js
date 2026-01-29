@@ -11,6 +11,7 @@ const configRoutes = require('./routes/config');
 const warmingRoutes = require('./routes/warming');
 const brandingRoutes = require('./routes/branding');
 const uploadRoutes = require('./routes/upload');
+ const { runMigrations } = require('./migrationsRunner');
 const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
@@ -49,6 +50,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
+ async function start() {
+   try {
+     await runMigrations();
+   } catch (error) {
+     console.error('Database migrations failed:', error);
+     process.exit(1);
+   }
+
+   app.listen(PORT, () => {
+     console.log(`Server running on port ${PORT}`);
+   });
+ }
+
+ start();

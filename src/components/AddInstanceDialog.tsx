@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -66,6 +67,9 @@ export function AddInstanceDialog({ open, onOpenChange, onAdd, editingInstance }
             <Server className="w-5 h-5 text-primary" />
             {editingInstance ? "Editar Instância" : "Nova Instância Evolution"}
           </DialogTitle>
+          <DialogDescription>
+            Configure a conexão com sua Evolution API. Defina como principal para usar como número de aquecimento.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">

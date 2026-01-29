@@ -9,8 +9,9 @@ import {
   ArrowRight, 
   MessageSquare,
   User,
-  Phone,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  Clock
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -22,6 +23,10 @@ interface WarmingLog {
     from?: string;
     to?: string;
     message?: string;
+    reason?: string;
+    error?: string;
+    action?: string;
+    success?: boolean;
   };
   createdAt: string;
 }
@@ -45,6 +50,16 @@ const actionConfig: Record<string, { label: string; color: string; icon: typeof 
     label: "Principal → Cliente",
     color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     icon: User
+  },
+  ERROR: {
+    label: "Erro",
+    color: "bg-destructive/10 text-destructive border-destructive/30",
+    icon: AlertTriangle
+  },
+  SKIPPED: {
+    label: "Ignorado",
+    color: "bg-secondary text-muted-foreground border-border",
+    icon: Clock
   }
 };
 
@@ -157,17 +172,28 @@ export function WarmingLogsPanel({ isWarming }: WarmingLogsPanelProps) {
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-2">
-                    <span className="font-medium text-foreground">{log.details.from}</span>
-                    <ArrowRight className="w-3 h-3" />
-                    <span className="font-medium text-foreground">{log.details.to}</span>
-                  </div>
+                  {log.details.from && log.details.to && (
+                    <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-2">
+                      <span className="font-medium text-foreground">{log.details.from}</span>
+                      <ArrowRight className="w-3 h-3" />
+                      <span className="font-medium text-foreground">{log.details.to}</span>
+                    </div>
+                  )}
 
                   {log.details.message && (
                     <div className="flex items-start gap-2 mt-2 p-2 rounded bg-background/50">
                       <MessageSquare className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {log.details.message}...
+                      </p>
+                    </div>
+                  )}
+
+                  {!log.details.message && (log.details.error || log.details.reason) && (
+                    <div className="flex items-start gap-2 mt-2 p-2 rounded bg-background/50">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {log.details.error || log.details.reason}
                       </p>
                     </div>
                   )}
