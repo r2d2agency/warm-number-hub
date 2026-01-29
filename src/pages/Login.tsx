@@ -20,10 +20,11 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const isLovablePreview =
+  const isPreviewEnvironment =
     typeof window !== 'undefined' &&
     (window.location.hostname.includes('lovableproject.com') ||
-      window.location.hostname.includes('lovable.app'));
+      window.location.hostname.includes('lovable.app') ||
+      window.location.hostname.includes('localhost'));
 
   const handleSaveApiUrl = () => {
     const normalized = apiUrl.trim().replace(/\/$/, '');
@@ -144,12 +145,12 @@ export default function Login() {
             </Button>
           </form>
 
-          {isLovablePreview && (
+          {isPreviewEnvironment && (
             <div className="mt-6 space-y-3 rounded-lg border border-border/50 bg-secondary/40 p-4">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-foreground">Configurar API (preview)</p>
                 <p className="text-xs text-muted-foreground">
-                  O preview do Lovable não tem o proxy do seu Nginx. Informe a URL pública do seu backend (ex:
+                  No ambiente de preview, informe a URL pública do seu backend (ex:
                   {' '}
                   <span className="font-mono">https://seu-dominio.com/api</span>).
                 </p>
