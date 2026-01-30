@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Instance } from "@/types/warming";
-import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit, RefreshCw, Star, Globe, Zap } from "lucide-react";
+import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit, RefreshCw, Star, Globe, Zap, Copy, Check } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { api } from "@/lib/api";
+import { api, getApiBaseUrl } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,6 +26,10 @@ export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSet
   const [checking, setChecking] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; latency?: number } | null>(null);
+  const [copied, setCopied] = useState(false);
+  
+  // Generate webhook URL based on the API base URL
+  const webhookUrl = `${getApiBaseUrl().replace('/api', '')}/api/webhook/evolution`;
   
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('superadmin');
   const canEdit = instance.isOwner || isAdmin;
@@ -94,6 +98,17 @@ export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSet
       setTestResult({ success: false });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleCopyWebhook = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+      toast.success('URL do webhook copiada!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Erro ao copiar');
     }
   };
 
@@ -225,10 +240,29 @@ export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSet
         )}
       </div>
 
-      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border/50">
+      {/* Webhook URL */}
+      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border/50 space-y-2">
         <p className="text-[10px] md:text-xs text-muted-foreground truncate">
           {instance.apiUrl}
         </p>
+        <div className="flex items-center gap-1">
+          <p className="text-[9px] text-muted-foreground flex-1 truncate" title={webhookUrl}>
+            <span className="font-medium">Webhook:</span> {webhookUrl}
+          </p>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 shrink-0"
+            onClick={handleCopyWebhook}
+            title="Copiar URL do webhook"
+          >
+            {copied ? (
+              <Check className="w-3 h-3 text-success" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
