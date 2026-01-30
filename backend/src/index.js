@@ -11,7 +11,8 @@ const configRoutes = require('./routes/config');
 const warmingRoutes = require('./routes/warming');
 const brandingRoutes = require('./routes/branding');
 const uploadRoutes = require('./routes/upload');
- const { runMigrations } = require('./migrationsRunner');
+const webhookRoutes = require('./routes/webhook');
+const { runMigrations } = require('./migrationsRunner');
 const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
@@ -37,6 +38,7 @@ app.get('/api/health', (req, res) => {
 // Public routes
 app.use('/api/auth', authRoutes);
 app.use('/api/branding', brandingRoutes);
+app.use('/api/webhook', webhookRoutes); // Webhook for Evolution API (no auth required)
 
 // Admin routes (tem seu próprio middleware de autenticação)
 app.use('/api/admin', adminRoutes);
