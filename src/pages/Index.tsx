@@ -341,8 +341,9 @@ export default function Index() {
           } : null} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
-          {/* Left Column - Instances */}
+        {/* First Row - 3 columns: Instances, Messages, Config & Clients */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {/* Column 1 - Instances */}
           <div className="space-y-4 md:space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-base md:text-lg font-semibold text-foreground">Instâncias Evolution</h2>
@@ -379,7 +380,7 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Second Column - Messages */}
+          {/* Column 2 - Messages */}
           <div className="space-y-4 md:space-y-6">
             <MessagesList
               messages={messages}
@@ -389,7 +390,7 @@ export default function Index() {
             />
           </div>
 
-          {/* Third Column - Config & Clients */}
+          {/* Column 3 - Config & Clients */}
           <div className="space-y-4 md:space-y-6">
             <ConfigPanel 
               config={config} 
@@ -406,12 +407,12 @@ export default function Index() {
               onImportNumbers={handleImportClientNumbers}
             />
           </div>
+        </div>
 
-          {/* Fourth Column - Diagnostics & Logs */}
-          <div className="space-y-4 md:space-y-6">
-            <WarmingDiagnosticsPanel />
-            <WarmingLogsPanel isWarming={isWarming} />
-          </div>
+        {/* Second Row - 2 columns: Diagnostics & Logs */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mt-6">
+          <WarmingDiagnosticsPanel />
+          <WarmingLogsPanel isWarming={isWarming} />
         </div>
       </main>
 
