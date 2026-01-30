@@ -313,8 +313,9 @@ router.post('/test-connection/:instanceId', async (req, res) => {
   try {
     const { instanceId } = req.params;
     
+    // Allow testing own instances OR global instances
     const instanceResult = await db.query(
-      'SELECT * FROM instances WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM instances WHERE id = $1 AND (user_id = $2 OR is_global = TRUE)',
       [instanceId, req.user.userId]
     );
     
