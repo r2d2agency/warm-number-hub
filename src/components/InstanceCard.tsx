@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Instance } from "@/types/warming";
-import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit, RefreshCw, Star, Globe } from "lucide-react";
+import { Wifi, WifiOff, Flame, MoreVertical, Trash2, Edit, RefreshCw, Star, Globe, Zap } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -24,6 +24,8 @@ interface InstanceCardProps {
 export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSetPrimary }: InstanceCardProps) {
   const { user } = useAuth();
   const [checking, setChecking] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; latency?: number } | null>(null);
   
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('superadmin');
   const canEdit = instance.isOwner || isAdmin;
@@ -67,6 +69,31 @@ export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSet
       toast.error('Erro ao verificar status');
     } finally {
       setChecking(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const { data, error } = await api.testInstanceConnection(instance.id);
+      if (error) {
+        toast.error(`Erro: ${error}`);
+        setTestResult({ success: false });
+      } else if (data) {
+        if (data.success) {
+          toast.success(`Conexão OK! Latência: ${data.latency}ms`);
+          setTestResult({ success: true, latency: data.latency });
+        } else {
+          toast.error(`Falha: ${data.error || 'Erro desconhecido'}`);
+          setTestResult({ success: false });
+        }
+      }
+    } catch {
+      toast.error('Erro ao testar conexão');
+      setTestResult({ success: false });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -178,6 +205,25 @@ export function InstanceCard({ instance, onEdit, onDelete, onStatusUpdate, onSet
           </div>
         </div>
       )}
+
+      {/* Test Connection Button */}
+      <div className="flex items-center gap-2 mt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 text-xs"
+          onClick={handleTestConnection}
+          disabled={testing}
+        >
+          <Zap className={`w-3 h-3 mr-1 ${testing ? 'animate-pulse' : ''}`} />
+          {testing ? 'Testando...' : 'Testar API'}
+        </Button>
+        {testResult && (
+          <span className={`text-xs ${testResult.success ? 'text-success' : 'text-destructive'}`}>
+            {testResult.success ? `${testResult.latency}ms` : '✗'}
+          </span>
+        )}
+      </div>
 
       <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border/50">
         <p className="text-[10px] md:text-xs text-muted-foreground truncate">
