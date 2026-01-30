@@ -9,6 +9,9 @@ const db = require('../db');
 // Store active warming sessions per user
 const activeWarmingSessions = new Map();
 
+// Track if we've already restored sessions on startup
+let sessionsRestored = false;
+
 /**
  * Get random delay between min and max
  */
@@ -476,8 +479,76 @@ function getWarmingStatus(userId) {
   };
 }
 
+/**
+ * Restore active warming sessions from database
+ * Called on backend startup to resume any sessions that were running
+ */
+async function restoreActiveSessions() {
+  if (sessionsRestored) {
+    console.log('[Warming] Sessions already restored, skipping');
+    return;
+  }
+  
+  sessionsRestored = true;
+  console.log('[Warming] Checking for sessions to restore...');
+  
+  try {
+    // Find users who had warming running recently (last log within 10 minutes that wasn't a STOP)
+    const result = await db.query(`
+      SELECT DISTINCT wl.user_id 
+      FROM warming_logs wl
+      WHERE wl.created_at > NOW() - INTERVAL '10 minutes'
+        AND wl.action NOT IN ('STOPPED', 'ERROR')
+      ORDER BY wl.user_id
+    `);
+    
+    if (result.rows.length === 0) {
+      console.log('[Warming] No recent sessions to restore');
+      return;
+    }
+    
+    console.log(`[Warming] Found ${result.rows.length} potential sessions to restore`);
+    
+    for (const row of result.rows) {
+      // Check if the last action wasn't a STOPPED
+      const lastAction = await db.query(`
+        SELECT action FROM warming_logs 
+        WHERE user_id = $1 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `, [row.user_id]);
+      
+      if (lastAction.rows[0]?.action !== 'STOPPED') {
+        console.log(`[Warming] Restoring session for user ${row.user_id}`);
+        await startWarming(row.user_id);
+      }
+    }
+  } catch (error) {
+    console.error('[Warming] Error restoring sessions:', error.message);
+    // Don't throw - this is a best-effort restoration
+  }
+}
+
+/**
+ * Get all active sessions (for debugging/monitoring)
+ */
+function getActiveSessions() {
+  const sessions = [];
+  for (const [userId, session] of activeWarmingSessions) {
+    sessions.push({
+      userId,
+      isActive: session.isActive,
+      startedAt: session.startedAt,
+      nextCycleAt: session.nextCycleAt
+    });
+  }
+  return sessions;
+}
+
 module.exports = {
   startWarming,
   stopWarming,
-  getWarmingStatus
+  getWarmingStatus,
+  restoreActiveSessions,
+  getActiveSessions
 };

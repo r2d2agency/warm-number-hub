@@ -14,6 +14,7 @@ const uploadRoutes = require('./routes/upload');
 const webhookRoutes = require('./routes/webhook');
 const { runMigrations } = require('./migrationsRunner');
 const { authenticateToken } = require('./middleware/auth');
+const warmingService = require('./services/warmingService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -68,6 +69,16 @@ app.use((err, req, res, next) => {
 
    app.listen(PORT, () => {
      console.log(`Server running on port ${PORT}`);
+     
+     // Restore active warming sessions after a short delay
+     setTimeout(async () => {
+       try {
+         await warmingService.restoreActiveSessions();
+         console.log('Warming sessions restoration complete');
+       } catch (error) {
+         console.error('Error restoring warming sessions:', error);
+       }
+     }, 3000);
    });
  }
 
