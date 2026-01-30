@@ -57,10 +57,11 @@ router.get('/', async (req, res) => {
   try {
     const result = await db.query(
       `SELECT * FROM instances 
-       WHERE user_id = $1 OR is_global = TRUE 
-       ORDER BY is_global ASC, is_primary DESC, created_at DESC`,
+       WHERE user_id = $1 OR is_global = TRUE OR is_global IS NOT NULL AND is_global = TRUE
+       ORDER BY COALESCE(is_global, FALSE) ASC, COALESCE(is_primary, FALSE) DESC, created_at DESC`,
       [req.user.userId]
     );
+    console.log(`[instances] User ${req.user.userId} fetched ${result.rows.length} instances (${result.rows.filter(r => r.is_global).length} global)`);
     res.json(result.rows.map(row => formatInstance(row, req.user.userId)));
   } catch (error) {
     console.error('Get instances error:', error);
