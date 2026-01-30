@@ -46,9 +46,12 @@ async function getRandomMessage(userId) {
  * Get all secondary instances (non-primary) for user
  */
 async function getSecondaryInstances(userId) {
+  // Include user's own instances AND global instances (shared by admins)
   const result = await db.query(
     `SELECT * FROM instances 
-     WHERE user_id = $1 AND is_primary = FALSE AND status = 'connected'
+     WHERE (user_id = $1 OR is_global = TRUE) 
+       AND is_primary = FALSE 
+       AND status = 'connected'
      ORDER BY RANDOM()`,
     [userId]
   );
