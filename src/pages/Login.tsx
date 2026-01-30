@@ -118,15 +118,12 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Deixe em branco se for primeiro acesso"
+                placeholder="Sua senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-secondary border-border/50 focus:border-primary"
                 disabled={isLoading}
               />
-              <p className="text-xs text-muted-foreground">
-                Primeiro acesso? Deixe a senha em branco.
-              </p>
             </div>
 
             <Button
